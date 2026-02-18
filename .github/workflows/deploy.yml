@@ -1,0 +1,66 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  repository_dispatch:
+    types: [wordpress-publish]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'plans/**'
+      - 'README.md'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v2
+        with:
+          hugo-version: 'latest'
+          extended: true
+          
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+          working-directory: scripts
+          
+      - name: Fetch WordPress Content
+        env:
+          WP_API_URL: ${{ secrets.WP_API_URL }}
+        run: |
+          cd scripts
+          bundle install
+          ruby fetch-posts.rb
+          ruby fetch-pages.rb
+          ruby fetch-images.rb
+          
+      - name: Download Hugo Modules
+        run: |
+          cd hugo-site
+          hugo mod get
+          
+      - name: Build Hugo Site
+        run: |
+          cd hugo-site
+          hugo --minify
+          
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ secrets.CLOUDFLARE_PAGES_PROJECT }}
+          directory: hugo-site/public
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
