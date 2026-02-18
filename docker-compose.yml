@@ -1,0 +1,99 @@
+# docker-compose.yml - WordPress + Caddy + WUD setup
+# Custom Caddy build with Cloudflare ACME DNS challenge support
+
+services:
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - ACME_EMAIL=${ACME_EMAIL}
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - wp-network
+    depends_on:
+      - wordpress
+    labels:
+      - wud.tag.include=^2\\.
+      - wud.trigger=docker-compose
+
+  wordpress:
+    image: wordpress:6.4-apache
+    container_name: wordpress
+    restart: unless-stopped
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_HOME', 'https://${DOMAIN}');
+        define('WP_SITEURL', 'https://${DOMAIN}');
+        define('AUTOMATIC_UPDATER_DISABLED', true);
+        define('WP_AUTO_UPDATE_CORE', false);
+        $_SERVER['HTTPS'] = 'on';
+    volumes:
+      - wp-content:/var/www/html/wp-content
+    networks:
+      - wp-network
+    depends_on:
+      - db
+    labels:
+      - wud.tag.include=^6\.4-apache$
+      - wud.trigger=docker-compose
+
+  db:
+    image: mariadb:10.11
+    container_name: mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - wp-network
+    labels:
+      - wud.tag.include=^10\\.11$
+      - wud.trigger=docker-compose
+
+  wud:
+    image: getwud/wud:latest
+    container_name: wud
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - wud-store:/store
+    environment:
+      - WUD_TRIGGER_DOCKERCOMPOSE_AUTO=true
+      - WUD_TRIGGER_DOCKERCOMPOSE_PRUNE=true
+      - WUD_WATCHER_LOCAL_CRON=0 3 * * *
+      - WUD_WATCHER_LOCAL_ROLLING_RESTART=true
+    labels:
+      - wud.watch=true
+
+volumes:
+  db-data:
+  wp-content:
+  caddy-data:
+  caddy-config:
+  wud-store:
+
+networks:
+  wp-network:
+    driver: bridge

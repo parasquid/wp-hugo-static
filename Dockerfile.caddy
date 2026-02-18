@@ -1,0 +1,16 @@
+# Dockerfile.caddy - Build Caddy with Cloudflare DNS plugin
+# This enables ACME DNS challenge for SSL certificates via Cloudflare
+
+FROM caddy:2-builder-alpine AS builder
+
+# Build Caddy with Cloudflare DNS plugin
+RUN xcaddy build \
+    --with github.com/caddy-dns/cloudflare
+
+FROM caddy:2-alpine
+
+# Copy the custom-built Caddy binary
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+
+# Caddy will run as non-root user by default
+# The Caddyfile is mounted via docker-compose
