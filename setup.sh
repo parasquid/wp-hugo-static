@@ -36,6 +36,11 @@ read -p "Private WordPress domain for Tailscale (e.g., wordpress.your-tailnet.ts
 echo ""
 echo "Cloudflare Configuration"
 echo "-----------------------"
+echo "Get these from https://dash.cloudflare.com:"
+echo "  - Account ID: shown in right sidebar"
+echo "  - API Token: Profile → API Tokens → Create Token (use 'Cloudflare Pages' template)"
+echo "  - Pages Project: Pages → Create a project (upload assets, not connect to git)"
+echo ""
 read -p "Cloudflare API Token (for Cloudflare Pages deployment): " CF_API_TOKEN
 read -p "Cloudflare Account ID: " CF_ACCOUNT_ID
 read -p "Cloudflare Pages Project Name: " CF_PROJECT
@@ -50,6 +55,9 @@ echo "Generated secure database passwords."
 echo ""
 echo "GitHub Configuration"
 echo "--------------------"
+echo "GitHub Token: https://github.com/settings/tokens (needs 'repo' scope for webhooks)"
+echo "Repo format: owner/repo (e.g., yourname/wp-hugo-static)"
+echo ""
 read -p "GitHub repository (owner/repo): " GITHUB_REPO
 read -p "GitHub Personal Access Token (for webhook): " GITHUB_TOKEN
 
@@ -63,6 +71,11 @@ read -p "Author Email: " AUTHOR_EMAIL
 echo ""
 echo "Giscus Comments Configuration"
 echo "-----------------------------"
+echo "Get these from https://giscus.app after installing the Giscus GitHub app:"
+echo "  1. Enable Discussions on your repo"
+echo "  2. Install Giscus app: https://github.com/apps/giscus"
+echo "  3. Fill in your repo details at https://giscus.app to get the IDs"
+echo ""
 read -p "Giscus Repo (owner/repo): " GISCUS_REPO
 read -p "Giscus Repo ID: " GISCUS_REPO_ID
 read -p "Giscus Category: " GISCUS_CATEGORY
