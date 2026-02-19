@@ -135,7 +135,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 5 → Task 7 → Task 9
 
 ## TODOs
 
-- [ ] 1. Add ImageMagick and image tools to Dockerfile.builder
+- [x] 1. Add ImageMagick and image tools to Dockerfile.builder
 
   **What to do**:
   - Add ImageMagick and related packages to Dockerfile.builder
@@ -199,7 +199,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 5 → Task 7 → Task 9
   - Files: `Dockerfile.builder`
   - Pre-commit: `docker build -f Dockerfile.builder -t test-builder .`
 
-- [ ] 2. Update GitHub Actions workflow with image dependencies
+- [x] 2. Update GitHub Actions workflow with image dependencies
 
   **What to do**:
   - Add step to install ImageMagick and image tools in `.github/workflows/deploy.yml`
@@ -263,7 +263,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 5 → Task 7 → Task 9
   - Files: `.github/workflows/deploy.yml`
   - Pre-commit: Validate YAML syntax
 
-- [ ] 3. Add Ruby gems for image processing
+- [x] 3. Add Ruby gems for image processing
 
   **What to do**:
   - Add `mini_magick` and `image_optim` gems to `scripts/Gemfile`
@@ -316,7 +316,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 5 → Task 7 → Task 9
   - Files: `scripts/Gemfile`, `scripts/Gemfile.lock`
   - Pre-commit: `bundle install` completes
 
-- [ ] 4. Create watermark generator script
+- [x] 4. Create watermark generator script
 
   **What to do**:
   - Create `scripts/generate-watermark.rb` that generates a default watermark.png
@@ -384,7 +384,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 5 → Task 7 → Task 9
   - Files: `scripts/generate-watermark.rb`, `hugo-site/static/images/watermark.png`
   - Pre-commit: `ruby scripts/generate-watermark.rb` succeeds
 
-- [ ] 5. Implement image processing pipeline in fetch-images.rb
+- [x] 5. Implement image processing pipeline in fetch-images.rb
 
   **What to do**:
   - Modify `scripts/fetch-images.rb` to process images after download
@@ -479,7 +479,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 5 → Task 7 → Task 9
   - Files: `scripts/fetch-images.rb`
   - Pre-commit: Script runs without errors
 
-- [ ] 6. Add format exclusions and caching logic
+- [x] 6. Add format exclusions and caching logic
 
   **What to do**:
   - Add logic to skip processing for SVG files (copy as-is)
@@ -550,7 +550,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 5 → Task 7 → Task 9
   - Files: `scripts/fetch-images.rb`
   - Pre-commit: Test with SVG and re-run scenario
 
-- [ ] 7. Create Hugo image partial with <picture> element
+- [x] 7. Create Hugo image partial with <picture> element
 
   **What to do**:
   - Create Hugo template partial at `hugo-site/layouts/partials/image.html`
@@ -759,7 +759,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 5 → Task 7 → Task 9
 
   **Commit**: NO (CI verification)
 
-- [ ] 10. Create documentation
+- [x] 10. Create documentation
 
   **What to do**:
   - Create `docs/image-optimization.md` documenting:
