@@ -1,6 +1,7 @@
 # Sisyphus planning
 .sisyphus
 .sisyphus/
+specs/
 
 # Environment secrets
 .env
@@ -41,6 +42,10 @@ hugo-site/resources/
 # Hugo Modules cache
 hugo-site/_vendor/
 hugo-site/go.sum
+
+# Hugo build cache
+hugo-site/.hugo_build.lock
+hugo-site/assets/
 
 # Ruby
 *.gem
