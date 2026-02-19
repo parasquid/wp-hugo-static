@@ -92,6 +92,15 @@ docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
 3. Ask: "Should I commit and push these changes?"
 4. Only commit after user confirms with "yes" or similar
 
+### .sisyphus Directory Note
+
+**IMPORTANT:** The `.sisyphus/` directory is **symlinked to `specs/`**. They are the same location.
+
+- **Don't panic** if you see paths like `.sisyphus/plans/` or `specs/plans/` - they're identical
+- **Don't try to fix** or reconcile the paths
+- **Don't overthink** which one to use - both work
+- The symlink exists for Oh My OpenCode compatibility while keeping the `specs/` convention
+
 ### NOTES
 
 - Builder container uses host network mode for localhost access
