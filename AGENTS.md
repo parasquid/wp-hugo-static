@@ -80,7 +80,19 @@ docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   wp-builder ruby scripts/<script>.rb
 ```
 
-## NOTES
+## AGENT GUIDANCE
+
+### NEVER Commit Without Explicit Permission
+
+**CRITICAL:** Always ask the user for permission before committing and pushing changes. The user often catches issues the agent misses and wants to review changes before they are committed.
+
+**Workflow:**
+1. Make the changes
+2. Show the user what changed (git diff)
+3. Ask: "Should I commit and push these changes?"
+4. Only commit after user confirms with "yes" or similar
+
+### NOTES
 
 - Builder container uses host network mode for localhost access
 - WordPress runs on configurable port (default 8888)
