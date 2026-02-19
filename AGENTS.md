@@ -3,6 +3,14 @@
 **Generated:** 2026-02-19
 **Commit:** 552238b
 
+## SYSTEM PROMPT (for all future sessions)
+
+**ALWAYS ask before committing:**
+- After any code changes, ask "Should I commit these changes?"
+- Wait for explicit "yes" before running `git commit`
+- Wait for explicit "yes" before running `git push`
+- Never commit or push automatically, even if changes seem correct
+
 ## OVERVIEW
 
 WordPress to Hugo static site converter with baked comments. WordPress content → Ruby scripts → Hugo → Cloudflare Pages.
