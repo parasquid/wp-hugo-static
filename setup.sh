@@ -32,12 +32,11 @@ echo "   WordPress is NOT publicly accessible - only via your Tailscale network.
 echo ""
 read -p "Public Hugo site domain (e.g., blog.yourdomain.com): " PUBLIC_DOMAIN
 read -p "Private WordPress domain for Tailscale (e.g., wordpress.your-tailnet.ts.net): " PRIVATE_DOMAIN
-read -p "Email for ACME (SSL certificates): " ACME_EMAIL
 
 echo ""
 echo "Cloudflare Configuration"
 echo "-----------------------"
-read -p "Cloudflare API Token (for ACME DNS challenge): " CF_API_TOKEN
+read -p "Cloudflare API Token (for Cloudflare Pages deployment): " CF_API_TOKEN
 read -p "Cloudflare Account ID: " CF_ACCOUNT_ID
 read -p "Cloudflare Pages Project Name: " CF_PROJECT
 
@@ -90,11 +89,8 @@ PUBLIC_DOMAIN=${PUBLIC_DOMAIN}
 # This is used for WordPress WP_HOME/WP_SITEURL configuration
 WP_HOST=${PRIVATE_DOMAIN}
 
-# Cloudflare API Token (for ACME DNS challenge)
+# Cloudflare API Token (for Cloudflare Pages deployment)
 CLOUDFLARE_API_TOKEN=${CF_API_TOKEN}
-
-# Email for ACME account registration
-ACME_EMAIL=${ACME_EMAIL}
 
 # Database Configuration
 DB_PASSWORD=${DB_PASSWORD}
