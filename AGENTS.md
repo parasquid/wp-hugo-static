@@ -42,9 +42,42 @@ WordPress to Hugo static site converter with baked comments. WordPress content â
 
 ## ANTI-PATTERNS
 
-- Don't run scripts directly on host - use `docker exec wp-builder`
+- Don't use `docker exec` - always use `docker compose exec` or `docker compose run`
+- Don't use `docker run` - always use `docker compose run`
 - Don't use localhost for WP_API_URL in scripts - use Docker hostname `wordpress`
 - Don't commit .env file (in .gitignore)
+
+## DOCKER COMMAND PATTERNS (Important!)
+
+**ALWAYS use `docker compose` instead of `docker exec` or `docker run`.** The project uses Docker Compose for service orchestration.
+
+### Running Ruby scripts with gems (e.g., fetch-images.rb)
+After modifying Gemfile, you MUST rebuild the builder image:
+```bash
+# 1. Rebuild builder to include new dependencies
+docker compose build builder
+
+# 2. Install gems into vendor/bundle
+docker compose run --rm -w /app/scripts builder bundle install
+
+# 3. Run Ruby script with gems (use bundle exec!)
+docker compose run --rm -w /app/scripts builder bundle exec ruby scripts/fetch-images.rb
+```
+
+### Running commands in running container
+```bash
+# WRONG - uses standalone docker
+docker exec wp-builder ruby scripts/fetch-posts.rb
+
+# CORRECT - uses docker compose
+docker compose exec builder ruby scripts/fetch-posts.rb
+```
+
+### Common mistakes
+- `docker exec wp-builder ruby ...` - bypasses Compose, may miss env vars
+- `docker run wp-builder ruby ...` - creates new container, loses state
+- Missing `bundle exec` - Ruby can't find gems
+- Using `test-builder` image - always use `builder` service from docker-compose.yml
 
 ## COMMANDS
 
@@ -52,13 +85,13 @@ WordPress to Hugo static site converter with baked comments. WordPress content â
 # Start services
 docker compose up -d wordpress db builder
 
-# Fetch posts
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+# Fetch posts (use docker compose exec, not docker exec)
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
-  wp-builder ruby scripts/fetch-posts.rb
+  builder ruby scripts/fetch-posts.rb
 
 # Build Hugo
-docker exec wp-builder hugo -s /app/hugo-site --minify
+docker compose exec builder hugo -s /app/hugo-site --minify
 ```
 
 ## SCRIPTS
@@ -75,9 +108,9 @@ docker exec wp-builder hugo -s /app/hugo-site --minify
 
 Run via:
 ```bash
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
-  wp-builder ruby scripts/<script>.rb
+  builder ruby scripts/<script>.rb
 ```
 
 ## AGENT GUIDANCE
