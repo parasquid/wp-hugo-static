@@ -1,48 +1,43 @@
-# docker-compose.yml - WordPress + Caddy + WUD setup
-# Custom Caddy build with Cloudflare ACME DNS challenge support
+# docker-compose.yml - WordPress + Hugo + WUD
 
 services:
-  caddy:
+  builder:
     build:
       context: .
-      dockerfile: Dockerfile.caddy
-    container_name: caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
-      - ACME_EMAIL=${ACME_EMAIL}
-      - DOMAIN=${DOMAIN}
+      dockerfile: Dockerfile.builder
+    container_name: wp-builder
+    working_dir: /app
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
+      - .:/app
+      - builder-vendor:/app/vendor/bundle
+    environment:
+      - BUNDLE_PATH=/app/vendor/bundle
+      - GEM_HOME=/app/vendor/bundle
+      - OUTPUT_DIR=/app/hugo-site/content/posts
+    env_file:
+      - .env
+    profiles:
+      - dev
     networks:
       - wp-network
-    depends_on:
-      - wordpress
-    labels:
-      - wud.tag.include=^2\\.
-      - wud.trigger=docker-compose
+    command: tail -f /dev/null
 
   wordpress:
     image: wordpress:6.4-apache
     container_name: wordpress
     restart: unless-stopped
+    ports:
+      - "${WP_PORT:-8888}:80"
     environment:
       WORDPRESS_DB_HOST: db:3306
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_CONFIG_EXTRA: |
-        define('WP_HOME', 'https://${DOMAIN}');
-        define('WP_SITEURL', 'https://${DOMAIN}');
+        define('WP_HOME', 'http://${WP_HOST:-wordpress}');
+        define('WP_SITEURL', 'http://${WP_HOST:-wordpress}');
         define('AUTOMATIC_UPDATER_DISABLED', true);
         define('WP_AUTO_UPDATE_CORE', false);
-        $_SERVER['HTTPS'] = 'on';
     volumes:
       - wp-content:/var/www/html/wp-content
     networks:
@@ -90,9 +85,8 @@ services:
 volumes:
   db-data:
   wp-content:
-  caddy-data:
-  caddy-config:
   wud-store:
+  builder-vendor:
 
 networks:
   wp-network:
