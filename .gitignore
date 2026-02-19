@@ -1,7 +1,6 @@
 # Sisyphus planning
 .sisyphus
 .sisyphus/
-specs/
 
 # Environment secrets
 .env
