@@ -43,8 +43,8 @@ read -p "Cloudflare Pages Project Name: " CF_PROJECT
 echo ""
 echo "Database Configuration"
 echo "----------------------"
-DB_PASSWORD=$(openssl rand -base64 32 | tr -d '=+/' | cut -c1-32)
-DB_ROOT_PASSWORD=$(openssl rand -base64 32 | tr -d '=+/' | cut -c1-32)
+DB_PASSWORD=$(openssl rand -hex 32)
+DB_ROOT_PASSWORD=$(openssl rand -hex 32)
 echo "Generated secure database passwords."
 
 echo ""
