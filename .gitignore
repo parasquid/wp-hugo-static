@@ -1,2 +1,58 @@
+# Sisyphus planning
+.sisyphus
 .sisyphus/
+
+# Environment secrets
 .env
+.env.local
+.env.*.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+logs/
+
+# Backup files
+*.bak
+*.backup
+backups/
+
+# Build outputs
+hugo-site/public/
+hugo-site/resources/
+
+# Hugo Modules cache
+hugo-site/_vendor/
+hugo-site/go.sum
+
+# Ruby
+*.gem
+*.rbc
+.bundle/
+vendor/bundle
+Gemfile.lock
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker volumes (local)
+docker-volumes/
