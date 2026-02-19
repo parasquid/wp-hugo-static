@@ -4,3 +4,5 @@ ruby '~> 3.0'
 
 gem 'httparty', '~> 0.21'
 gem 'nokogiri', '~> 1.15'
+gem 'mini_magick', '~> 4.12'
+gem 'image_optim', '~> 0.31'

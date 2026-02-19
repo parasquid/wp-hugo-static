@@ -50,12 +50,19 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 ENV GOPATH="/go"
 ENV GO111MODULE="on"
 
-# Install Ruby dependencies
+# Install Ruby dependencies and image processing tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ruby-dev \
     build-essential \
     libxml2-dev \
     libcurl4-openssl-dev \
+    imagemagick \
+    libmagickwand-dev \
+    webp \
+    libavif-bin \
+    jpegoptim \
+    optipng \
+    pngquant \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up bundler

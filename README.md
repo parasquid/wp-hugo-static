@@ -374,6 +374,10 @@ Access the WUD dashboard at `http://your-server:3000` (Tailscale only).
 2. Check `hugo-site/static/images/` directory
 3. Verify image paths in content
 
+### Image Optimization
+
+wp-hugo-static automatically resizes, watermarks, and converts images to WebP/AVIF. See [docs/image-optimization.md](docs/image-optimization.md) for customization options.
+
 ## Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
