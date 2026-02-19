@@ -1,6 +1,7 @@
 {{ if and (.Params.comments | default true) (eq .Params.comments nil | or .Params.comments) }}
 {{ if .Site.Params.comments.enabled }}
 {{ if eq .Site.Params.comments.provider "giscus" }}
+{{ partial "comments/baked.html" . }}
 <div class="giscus"></div>
 <script src="https://giscus.app/client.js"
         data-repo="{{ .Site.Params.comments.giscus.repo }}"
@@ -17,6 +18,11 @@
         data-loading="{{ .Site.Params.comments.giscus.loading | default "lazy" }}"
         crossorigin="anonymous"
         async>
+</script>
+<script>
+document.addEventListener('giscus:ready', () => {
+  document.querySelector('.baked-comments')?.style.setProperty('display', 'none');
+});
 </script>
 {{ end }}
 {{ end }}
