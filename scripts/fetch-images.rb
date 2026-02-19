@@ -18,7 +18,6 @@ WATERMARK_OPACITY = 0.20
 WATERMARK_TILES = 4
 WATERMARK_JITTER = 20
 WEBP_QUALITY = 80
-AVIF_QUALITY = 50
 
 def extract_image_urls(content)
   urls = []
@@ -111,7 +110,7 @@ def apply_tiled_watermark(path)
   puts "    Watermark applied (#{WATERMARK_TILES}x#{WATERMARK_TILES} tiles)"
 end
 
-def convert_to_webp(path)
+def convert_to_webp_only(path)
   return nil unless File.exist?(path)
   
   webp_path = path.sub(/\.[^.]+$/, '.webp')
@@ -125,30 +124,12 @@ def convert_to_webp(path)
     image.format 'webp'
     image.write(webp_path)
     puts "    Created: #{File.basename(webp_path)}"
+    File.delete(path)
+    puts "    Deleted original: #{File.basename(path)}"
+    
     webp_path
   rescue => e
     puts "    WebP conversion failed: #{e.message}"
-    nil
-  end
-end
-
-def convert_to_avif(path)
-  return nil unless File.exist?(path)
-  
-  avif_path = path.sub(/\.[^.]+$/, '.avif')
-  return avif_path if File.exist?(avif_path)
-  
-  puts "  Converting to AVIF: #{File.basename(path)}"
-  
-  begin
-    image = MiniMagick::Image.open(path)
-    image.quality AVIF_QUALITY.to_s
-    image.format 'avif'
-    image.write(avif_path)
-    puts "    Created: #{File.basename(avif_path)}"
-    avif_path
-  rescue => e
-    puts "    AVIF conversion failed (ImageMagick may lack AV1 encoder): #{e.message}"
     nil
   end
 end
@@ -189,15 +170,12 @@ def already_processed?(path)
   return false unless File.exist?(path)
   
   webp_path = path.sub(/\.[^.]+$/, '.webp')
-  avif_path = path.sub(/\.[^.]+$/, '.avif')
-  
-  return false unless File.exist?(webp_path) && File.exist?(avif_path)
+  return false unless File.exist?(webp_path)
   
   original_mtime = File.mtime(path)
   webp_mtime = File.mtime(webp_path)
-  avif_mtime = File.mtime(avif_path)
   
-  if original_mtime <= webp_mtime && original_mtime <= avif_mtime
+  if original_mtime <= webp_mtime
     puts "  Skipping: #{File.basename(path)} - already processed"
     return true
   end
@@ -224,17 +202,15 @@ def process_image(path)
     return
   end
   
-  puts "Processing: #{filename}"
   resize_image(path)
   apply_tiled_watermark(path)
   
-  variants = [path]
-  variants << convert_to_webp(path) if convert_to_webp(path)
-  variants << convert_to_avif(path) if convert_to_avif(path)
+  webp_path = convert_to_webp_only(path)
   
-  optimize_images(variants.compact)
-  
-  puts "  Processing complete"
+  if webp_path
+    optimize_images([webp_path])
+    puts "  Processing complete"
+  end
 end
 
 def download_image(url, output_path)

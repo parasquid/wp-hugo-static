@@ -1,15 +1,15 @@
 {{/*
-  Image partial with responsive picture element support
+  Image partial - WebP only (no fallback)
   
-  Generates <picture> element with AVIF, WebP sources and fallback.
-  Automatically checks if variant formats exist before including sources.
+  Serves WebP images directly. Since originals are deleted after conversion,
+  this simply renders the WebP image.
   
   Usage: 
     {{ partial "image.html" (dict "src" "/images/photo.jpg" "alt" "A photo") }}
     {{ partial "image.html" (dict "src" "photo.jpg" "alt" "Featured" "class" "featured-image" "loading" "eager") }}
   
   Parameters:
-    - src: Image path (relative to static/ or assets/, e.g., "/images/photo.jpg" or "photo.jpg")
+    - src: Image path (e.g., "/images/photo.jpg" or "photo.jpg")
     - alt: Alt text (required for accessibility)
     - class: CSS class names (optional)
     - loading: Loading attribute - "lazy" or "eager" (default: "lazy")
@@ -20,7 +20,6 @@
 {{ $class := .class | default "" }}
 {{ $loading := .loading | default "lazy" }}
 
-{{/* Validate required parameters */}}
 {{ if not $src }}
   {{ errorf "partial 'image.html': 'src' parameter is required" }}
 {{ end }}
@@ -28,14 +27,11 @@
   {{ warnf "partial 'image.html': 'alt' parameter is missing - required for accessibility" }}
 {{ end }}
 
-{{/* Normalize the source path */}}
 {{ $srcPath := $src }}
 {{ if hasPrefix $src "/" }}
   {{ $srcPath = strings.TrimPrefix "/" $src }}
 {{ end }}
 
-{{/* Get filename components for variant generation */}}
-{{ $fileName := path.Base $srcPath }}
 {{ $fileStem := path.BaseName $srcPath }}
 {{ $fileDir := path.Dir $srcPath }}
 {{ if eq $fileDir "." }}
@@ -44,78 +40,6 @@
   {{ $fileDir = printf "%s/" $fileDir }}
 {{ end }}
 
-{{/* Build variant paths for static directory */}}
-{{ $staticBase := printf "static/%s" $srcPath }}
-{{ $avifStaticPath := printf "%s%s.avif" $fileDir $fileStem }}
-{{ $webpStaticPath := printf "%s%s.webp" $fileDir $fileStem }}
+{{ $webpPath := printf "%s%s.webp" $fileDir $fileStem }}
 
-{{/* Try to get resource from assets directory */}}
-{{ $resource := "" }}
-{{ $resource = resources.Get $srcPath }}
-{{ if not $resource }}
-  {{ $resource = resources.Get (printf "static/%s" $srcPath) }}
-{{ end }}
-
-{{/* Check for existing variant files or process them */}}
-{{ $avifSrc := "" }}
-{{ $webpSrc := "" }}
-{{ $fallbackSrc := "" }}
-
-{{/* Determine fallback source URL */}}
-{{ if $resource }}
-  {{ $fallbackSrc = $resource.RelPermalink }}
-{{ else }}
-  {{/* Static file fallback - check if file exists */}}
-  {{ if fileExists $staticBase }}
-    {{ $fallbackSrc = (printf "/%s" $srcPath) }}
-  {{ else }}
-    {{/* No image found at all - render with original src as-is */}}
-    <img src="{{ $src }}" alt="{{ $alt }}" class="{{ $class }}" loading="{{ $loading }}">
-    {{ return }}
-  {{ end }}
-{{ end }}
-
-{{/* Process AVIF variant */}}
-{{ $avifSrc = "" }}
-{{ if $resource }}
-  {{/* Try to process AVIF from resource */}}
-  {{ $avifResource := $resource.Resize "480w avif" }}
-  {{ if $avifResource }}
-    {{ $avifSrc = $avifResource.RelPermalink }}
-  {{ end }}
-{{ else }}
-  {{/* Check if static AVIF file exists */}}
-  {{ if fileExists (printf "static/%s" $avifStaticPath) }}
-    {{ $avifSrc = printf "/%s" $avifStaticPath }}
-  {{ end }}
-{{ end }}
-
-{{/* Process WebP variant */}}
-{{ $webpSrc = "" }}
-{{ if $resource }}
-  {{/* Try to process WebP from resource */}}
-  {{ $webpResource := $resource.Resize "480w webp" }}
-  {{ if $webpResource }}
-    {{ $webpSrc = $webpResource.RelPermalink }}
-  {{ end }}
-{{ else }}
-  {{/* Check if static WebP file exists */}}
-  {{ if fileExists (printf "static/%s" $webpStaticPath) }}
-    {{ $webpSrc = printf "/%s" $webpStaticPath }}
-  {{ end }}
-{{ end }}
-
-<picture>
-  {{/* AVIF source - only include if variant exists */}}
-  {{ if $avifSrc }}
-    <source srcset="{{ $avifSrc }}" type="image/avif">
-  {{ end }}
-  
-  {{/* WebP source - only include if variant exists */}}
-  {{ if $webpSrc }}
-    <source srcset="{{ $webpSrc }}" type="image/webp">
-  {{ end }}
-  
-  {{/* Fallback img element */}}
-  <img src="{{ $fallbackSrc }}" alt="{{ $alt }}" class="{{ $class }}" loading="{{ $loading }}">
-</picture>
+<img src="{{ $webpPath }}" alt="{{ $alt }}" class="{{ $class }}" loading="{{ $loading }}">
