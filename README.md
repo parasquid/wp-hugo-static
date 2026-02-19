@@ -4,11 +4,10 @@ A reusable, open-source harness that turns WordPress into a static site using Hu
 
 ## Features
 
-- **Self-hosted WordPress** with Caddy reverse proxy
-- **Caddy** with Cloudflare ACME DNS challenge for automatic SSL
-- **WUD (What's Up Docker)** for semi-automatic container updates
-- **Hugo** with Stack theme (via Hugo Modules, not git submodules)
+- **Self-hosted WordPress** (direct access or reverse proxy)
+- **Hugo** with Stack theme (via Hugo Modules)
 - **Giscus** comments via GitHub Discussions
+- **Baked Comments** - Comments fetched at build time, baked into static HTML for SEO
 - **GitHub Actions** CI/CD pipeline
 - **Hybrid content**: WordPress posts/pages + custom Hugo pages
 
@@ -17,14 +16,8 @@ A reusable, open-source harness that turns WordPress into a static site using Hu
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
 │  WordPress      │────▶│  GitHub Actions  │────▶│  Cloudflare     │
-│  (Caddy Proxy)  │     │  (Build & Deploy)│     │  Pages          │
+│                 │     │  (Build & Deploy)│     │  Pages          │
 └─────────────────┘     └──────────────────┘     └─────────────────┘
-        │
-        ▼
-┌─────────────────┐
-│  Caddy + WUD    │
-│  (SSL + Updates)│
-└─────────────────┘
 ```
 
 ## Prerequisites
@@ -32,37 +25,45 @@ A reusable, open-source harness that turns WordPress into a static site using Hu
 - Docker and Docker Compose
 - Cloudflare account (for DNS and Pages)
 - GitHub account (for CI/CD and Giscus)
-- Go (for Hugo Modules)
-- Hugo Extended (for Stack theme)
-- Ruby 3.4+ (for conversion scripts)
 
 ### Installing Prerequisites
 
-**macOS:**
+This project uses **Homebrew** as the package manager for all platforms (macOS and Linux).
+
+**All Platforms:**
 ```bash
-brew install go hugo ruby
+# Install Homebrew if not already installed
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Docker
+brew install --cask docker
 ```
 
-**Linux:**
+All other tools (Ruby, Hugo, Go) run via the builder container - no need to install them locally!
+
+### Running Tools via Docker
+
 ```bash
-# Go
-sudo apt install golang-go
+# Start builder container
+docker compose up -d wordpress db builder
 
-# Hugo Extended
-wget https://github.com/gohugoio/hugo/releases/download/v0.123.0/hugo_extended_0.123.0_linux-amd64.tar.gz
-tar -xzf hugo_extended_*.tar.gz
-sudo mv hugo /usr/local/bin/
+# Ruby scripts (via builder container)
+docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
+  wp-builder ruby scripts/ensure-archived-category.rb
 
-# Ruby
-sudo apt install ruby-full
+# Hugo (via builder container - pre-installed)
+docker exec wp-builder hugo -s hugo-site --minify
 ```
+
+**Important**: When running scripts inside the builder container, use `http://wordpress` (Docker hostname), NOT `http://localhost:8888`.
 
 ## Quick Start
 
 ### 1. Clone and Configure
 
 ```bash
-git clone https://github.com/yourusername/wp-hugo-static.git
+git clone https://github.com/parasquid/wp-hugo-static.git
 cd wp-hugo-static
 ./setup.sh
 ```
@@ -77,14 +78,10 @@ The setup script will prompt for:
 ### 2. Start WordPress
 
 ```bash
-docker compose up -d --build
+docker compose up -d wordpress db builder
 ```
 
-### 3. Complete WordPress Setup
-
-1. Access WordPress at your configured domain: `https://yourdomain.com`
-2. Complete the WordPress installation wizard
-3. Create some test posts
+Access WordPress at **http://localhost:8888**
 
 ### 4. Configure GitHub Secrets
 
@@ -149,13 +146,130 @@ wp-hugo-static supports three content types:
 
 See `docs/hybrid-content.md` for details.
 
+### Baked Comments and Archive Workflow
+
+wp-hugo-static includes a baked comments feature that fetches comments at build time and embeds them directly into the static HTML.
+
+#### How Baked Comments Work
+
+1. During the Hugo build process, comments are fetched from the WordPress REST API
+2. Comments are rendered as static HTML and embedded in the page
+3. This means comments are visible in the page source, improving SEO
+4. Search engines can index comment content, which wouldn't be possible with client-side loaded comments
+
+#### Active Posts vs Archived Posts
+
+- **Active Posts**: Display the Giscus widget for real-time comment interaction via GitHub Discussions
+- **Archived Posts**: Display only the baked (static) comments with no Giscus widget. This makes archived posts read-only.
+
+#### How to Archive a Post
+
+To archive a post in WordPress:
+
+1. Open the post in the WordPress admin panel
+2. Add the category "Archived" to the post
+3. Save/update the post
+4. Trigger a new build (push to main or run the deploy workflow)
+
+The build script automatically detects posts with the "Archived" category and:
+- Includes the baked comments in the static output
+- Removes the Giscus widget to make the post read-only
+
+This workflow is ideal for older posts that you want to preserve for reference but no longer want to accept new comments on.
+
+## Testing
+
+wp-hugo-static includes several seed scripts to help you test the full workflow without manually creating content.
+
+### Available Test Scripts
+
+| Script | Description |
+|--------|-------------|
+| `scripts/ensure-archived-category.rb` | Ensures the "Archived" category exists in WordPress |
+| `scripts/seed-posts.rb` | Creates test posts in WordPress with various categories |
+| `scripts/seed-discussions.rb` | Creates sample GitHub Discussions for testing baked comments |
+
+### Running the Test Scripts
+
+**Prerequisites:**
+- Docker and Docker Compose (must be running)
+- Ruby 3.4+ (or use the included Ruby container)
+
+First, ensure Ruby dependencies are installed:
+
+```bash
+cd scripts
+bundle install
+```
+
+### Running Test Scripts
+
+All scripts run via Docker. See [docs/testing.md](docs/testing.md) for:
+- First-time setup (installing Podman, starting services)
+- Full testing workflow
+- Verification steps
+
+Quick start:
+
+```bash
+# Start the builder container
+docker compose up -d wordpress db builder
+docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
+  wp-builder ruby scripts/ensure-archived-category.rb
+docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
+  wp-builder ruby scripts/seed-posts.rb
+GITHUB_TOKEN=xxx GITHUB_REPO=owner/repo \
+  docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  wp-builder ruby scripts/seed-discussions.rb
+```
+
+### Testing Workflow
+
+Follow this sequence to test the complete pipeline:
+
+```bash
+# 1. Reset: Clear existing content from Hugo
+rm -rf hugo-site/content/posts/*
+rm -rf hugo-site/content/pages/*
+
+# 2. Seed: Create test content in WordPress
+docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
+  wp-builder ruby scripts/ensure-archived-category.rb
+docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
+  wp-builder ruby scripts/seed-posts.rb
+GITHUB_TOKEN=xxx GITHUB_REPO=owner/repo \
+  docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  wp-builder ruby scripts/seed-discussions.rb
+
+# 3. Fetch: Import content from WordPress to Hugo
+docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
+  wp-builder ruby scripts/fetch-posts.rb
+docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
+  wp-builder ruby scripts/fetch-pages.rb
+
+# 4. Build: Generate the static site
+docker exec wp-builder hugo -s /app/hugo-site
+
+# 5. Verify: Check the output
+# - Open hugo-site/public in a browser
+# - Check that baked comments appear on archived posts
+# - Check that Giscus widget appears on active posts
+```
+
+This workflow tests the complete cycle from content creation in WordPress to static generation in Hugo, including the baked comments and archive functionality.
+
 ## File Structure
 
 ```
 wp-hugo-static/
 ├── docker-compose.yml      # Docker services
-├── Dockerfile.caddy        # Custom Caddy build
-├── Caddyfile              # Caddy configuration
+├── Dockerfile.builder      # Builder container with Ruby, Hugo, Go
 ├── .env.example           # Environment template
 ├── setup.sh               # Setup script
 ├── backup.sh              # Backup script
@@ -224,8 +338,15 @@ Access the WUD dashboard at `http://your-server:3000` (Tailscale only).
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines before submitting a pull request.
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+This project follows the [Ruby Community Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
-MIT License - see LICENSE file for details.
+GNU Affero General Public License v3.0 (AGPLv3) - see [LICENSE](LICENSE) for details.
+
+This means:
+- You can use, modify, and distribute this software
+- If you modify and deploy it over a network, you must provide source code to users
+- All derivative works must also be licensed under AGPLv3
