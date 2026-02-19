@@ -99,7 +99,9 @@ def apply_tiled_watermark(path)
       y_offset = [0, [y_offset, img_height - wm_height].min].max
       
       watermark_copy = watermark.dup
-      watermark_copy.expression = "A*#{WATERMARK_OPACITY}"
+      watermark_copy.alpha 'set'
+      watermark_copy.channel 'A'
+      watermark_copy.evaluate 'multiply', WATERMARK_OPACITY.to_s
       image = image.composite(watermark_copy) do |c|
         c.geometry "+#{x_offset}+#{y_offset}"
       end
