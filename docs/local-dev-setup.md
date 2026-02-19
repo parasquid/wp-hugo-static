@@ -1,0 +1,195 @@
+# Local Development Setup
+
+This guide covers how to set up and run the wp-hugo-static project locally for development.
+
+## Prerequisites
+
+- Docker installed
+- Docker Compose plugin installed (`docker compose`)
+- At least 2GB free disk space
+
+## Quick Start
+
+### 1. Start Services
+
+```bash
+docker compose up -d wordpress db builder
+```
+
+- WordPress available at: **http://localhost:8888**
+- Builder container has Ruby, Hugo, Go pre-installed
+- All containers on same Docker network
+
+### 2. First-Time WordPress Setup
+
+If starting fresh:
+
+```bash
+# Install WP-CLI (one-time)
+docker exec wordpress sh -c 'curl -sL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp && chmod +x /tmp/wp'
+
+# Install WordPress (use Docker network hostname, not localhost)
+docker exec wordpress php /tmp/wp core install \
+  --url=http://wordpress \
+  --title="Dev Site" \
+  --admin_user=admin \
+  --admin_password=admin123 \
+  --admin_email=admin@example.com \
+  --skip-email \
+  --allow-root
+```
+
+Default credentials: `admin` / `admin123`
+
+### 3. Install Ruby Gems (First Time)
+
+```bash
+docker exec wp-builder bundle install --gemfile=/app/scripts/Gemfile
+```
+
+Gems are cached in a volume and persist between runs.
+
+## Common Tasks
+
+### Create Test Posts
+
+```bash
+# Create Archived category
+docker exec wordpress php /tmp/wp term create category Archived --allow-root
+
+# Create regular post
+docker exec wordpress php /tmp/wp post create \
+  --post_title="My Post" \
+  --post_content="Post content here" \
+  --post_status=publish \
+  --allow-root
+
+# Create archived post
+docker exec wordpress php /tmp/wp post create \
+  --post_title="Old Post" \
+  --post_content="Archived content" \
+  --post_status=publish \
+  --categories=Archived \
+  --allow-root
+```
+
+### Fetch Posts to Hugo
+
+```bash
+docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  -e WP_USERNAME=admin \
+  -e WP_APPLICATION_PASSWORD=admin123 \
+  wp-builder ruby scripts/fetch-posts.rb
+```
+
+Posts are converted to Markdown and saved to `hugo-site/content/posts/`
+
+### Build Static Site
+
+```bash
+docker exec wp-builder hugo -s /app/hugo-site --minify
+```
+
+Output goes to `hugo-site/public/`
+
+### Full Workflow
+
+```bash
+# 1. Start services
+docker compose up -d wordpress db builder
+
+# 2. Fetch posts from WordPress (use http://wordpress, NOT localhost)
+docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  -e WP_USERNAME=admin \
+  -e WP_APPLICATION_PASSWORD=admin123 \
+  wp-builder ruby scripts/fetch-posts.rb
+
+# 3. Fetch comments from GitHub (requires GITHUB_TOKEN)
+docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  -e GITHUB_TOKEN=ghp_xxx \
+  -e GITHUB_REPO=owner/repo \
+  wp-builder ruby scripts/fetch-comments.rb
+
+# 4. Build Hugo site
+docker exec wp-builder hugo -s /app/hugo-site --minify
+```
+
+## Container Overview
+
+| Container | Purpose | Access |
+|-----------|---------|--------|
+| `wordpress` | WordPress CMS | http://localhost:8888 |
+| `mariadb` | WordPress database | Internal only |
+| `wp-builder` | Build tools (Ruby, Hugo, Go) | Use `docker exec wp-builder` |
+
+## Important: Use Docker Hostname for Scripts
+
+When running scripts inside the builder container, use `http://wordpress` (Docker network hostname), NOT `http://localhost:8888`:
+
+```bash
+# Correct (for scripts inside builder)
+-e WP_API_URL=http://wordpress/wp-json/wp/v2
+
+# Wrong (for scripts inside builder - will fail)
+-e WP_API_URL=http://localhost:8888/wp-json/wp/v2
+```
+
+This is because the builder container is on the same Docker network as WordPress and can resolve the `wordpress` hostname.
+
+From your host machine (browser), use **http://localhost:8888** to access WordPress.
+
+## Environment Variables
+
+Set these when running scripts:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `WP_API_URL` | WordPress API (use Docker hostname) | `http://wordpress/wp-json/wp/v2` |
+| `WP_USERNAME` | WP admin username | `admin` |
+| `WP_APPLICATION_PASSWORD` | WP app password | (see below) |
+| `GITHUB_TOKEN` | GitHub PAT for Discussions | `ghp_xxx` |
+| `GITHUB_REPO` | GitHub repo (owner/repo) | `parasquid/wp-hugo-static` |
+
+### Getting WordPress Application Password
+
+1. Go to http://localhost:8888/wp-admin
+2. Users → Profile
+3. Application Passwords → Add New
+4. Name it (e.g., "dev") and copy the generated password
+
+Use the password as `WP_APPLICATION_PASSWORD`.
+
+## Troubleshooting
+
+### "Connection refused" or "Name or service not known"
+
+Make sure you're using `http://wordpress` (Docker hostname), not `http://localhost:8888` when running scripts inside the builder container.
+
+### Gem installation fails
+
+```bash
+docker volume rm parabosscom_builder-vendor
+docker exec wp-builder bundle install --gemfile=/app/scripts/Gemfile
+```
+
+### Hugo build fails with module errors
+
+```bash
+docker exec wp-builder rm -rf /tmp/hugo_cache
+docker exec wp-builder hugo -s /app/hugo-site --minify
+```
+
+### Reset Everything
+
+```bash
+# Stop and remove all containers
+docker compose down
+
+# Remove volumes (will lose WordPress data)
+docker compose down -v
+
+# Start fresh
+docker compose up -d wordpress db builder
+
+# Re-run WordPress setup (step 2 above)
+```
