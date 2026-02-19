@@ -1,0 +1,22 @@
+{{/* baked.html - Render static comments from JSON data */}}
+{{/* Expects: current page context with .Slug available */}}
+{{ $slug := .Slug }}
+{{ $comments := index .Site.Data.comments $slug }}
+
+{{ if and $slug $comments }}
+<div class="baked-comments">
+  {{ with $comments.comments }}
+    {{ range . }}
+    <article class="baked-comment">
+      <header class="baked-comment-header">
+        <span class="baked-comment-author">{{ .author }}</span>
+        <time class="baked-comment-date" datetime="{{ .createdAt }}">{{ .createdAt | time.AsTime | time.Format "January 2, 2006" }}</time>
+      </header>
+      <div class="baked-comment-body">
+        {{ .body | safeHTML }}
+      </div>
+    </article>
+    {{ end }}
+  {{ end }}
+</div>
+{{ end }}
