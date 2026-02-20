@@ -48,12 +48,12 @@ All other tools (Ruby, Hugo, Go) run via the builder container - no need to inst
 docker compose up -d wordpress db builder
 
 # Ruby scripts (via builder container)
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
-  wp-builder ruby scripts/ensure-archived-category.rb
+  builder ruby scripts/ensure-archived-category.rb
 
 # Hugo (via builder container - pre-installed)
-docker exec wp-builder hugo -s hugo-site --minify
+docker compose exec builder hugo -s /app/hugo-site --minify
 ```
 
 **Important**: When running scripts inside the builder container, use `http://wordpress` (Docker hostname), NOT `http://localhost:8888`.
@@ -252,15 +252,15 @@ Quick start:
 ```bash
 # Start the builder container
 docker compose up -d wordpress db builder
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
-  wp-builder ruby scripts/ensure-archived-category.rb
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  builder ruby scripts/ensure-archived-category.rb
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
-  wp-builder ruby scripts/seed-posts.rb
+  builder ruby scripts/seed-posts.rb
 GITHUB_TOKEN=xxx GITHUB_REPO=owner/repo \
-  docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
-  wp-builder ruby scripts/seed-discussions.rb
+  docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  builder ruby scripts/seed-discussions.rb
 ```
 
 ### Testing Workflow
@@ -273,26 +273,26 @@ rm -rf hugo-site/content/posts/*
 rm -rf hugo-site/content/pages/*
 
 # 2. Seed: Create test content in WordPress
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
-  wp-builder ruby scripts/ensure-archived-category.rb
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  builder ruby scripts/ensure-archived-category.rb
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
-  wp-builder ruby scripts/seed-posts.rb
+  builder ruby scripts/seed-posts.rb
 GITHUB_TOKEN=xxx GITHUB_REPO=owner/repo \
-  docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
-  wp-builder ruby scripts/seed-discussions.rb
+  docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  builder ruby scripts/seed-discussions.rb
 
 # 3. Fetch: Import content from WordPress to Hugo
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
-  wp-builder ruby scripts/fetch-posts.rb
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+  builder ruby scripts/fetch-posts.rb
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin -e WP_APPLICATION_PASSWORD=xxx \
-  wp-builder ruby scripts/fetch-pages.rb
+  builder ruby scripts/fetch-pages.rb
 
 # 4. Build: Generate the static site
-docker exec wp-builder hugo -s /app/hugo-site
+docker compose exec builder hugo -s /app/hugo-site
 
 # 5. Verify: Check the output
 # - Open hugo-site/public in a browser

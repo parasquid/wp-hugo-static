@@ -11,6 +11,7 @@ OUTPUT_DIR = ENV.fetch('OUTPUT_DIR', 'hugo-site/static/images')
 SCRIPT_DIR = File.dirname(File.expand_path(__FILE__))
 # Watermark always in static/images regardless of OUTPUT_DIR
 WATERMARK_PATH = File.join(SCRIPT_DIR, '..', 'hugo-site', 'static', 'images', 'watermark.png')
+POSTS_DIR = File.join(SCRIPT_DIR, '..', 'hugo-site', 'content', 'posts')
 
 # Image processing configuration
 MAX_LANDSCAPE_WIDTH = 1920
@@ -24,6 +25,7 @@ WEBP_QUALITY = 80
 def extract_image_urls(content)
   urls = []
   content.scan(/<img[^>]+src=["']([^"']+)["']/) { |match| urls << match[0] }
+  content.scan(/!\[.*?\]\(([^)]+)\)/) { |match| urls << match[0] }
   content.scan(/srcset=["']([^"']+)["']/) do |match|
     match[0].split(',').each { |src| urls << src.strip.split(' ').first }
   end
@@ -190,70 +192,76 @@ def already_processed?(path)
 end
 
 def process_image(path)
-  return unless File.exist?(path)
-  
+  return nil unless File.exist?(path)
+
   filename = File.basename(path)
-  
+
   if skip_svg?(filename)
     puts "  Skipping SVG: #{filename}"
-    return
+    return path
   end
-  
+
   if animated_gif?(path)
     puts "  Skipping animated GIF: #{filename}"
-    return
+    return path
   end
-  
+
   if already_processed?(path)
-    return
+    webp_path = path.sub(/\.[^.]+$/, '.webp')
+    return File.exist?(webp_path) ? webp_path : path
   end
-  
+
   resize_image(path)
   apply_tiled_watermark(path)
-  
+
   webp_path = convert_to_webp_only(path)
-  
+
   if webp_path
     optimize_images([webp_path])
     puts "  Processing complete"
   end
+
+  webp_path || path
 end
 
 def download_image(url, output_path)
   uri = URI(url)
   response = Net::HTTP.get_response(uri)
-  
+
   if response.is_a?(Net::HTTPSuccess)
     FileUtils.mkdir_p(File.dirname(output_path))
     File.binwrite(output_path, response.body)
     puts "Downloaded: #{output_path}"
-    
-    process_image(output_path)
-    
-    true
+
+    return process_image(output_path)
   else
     puts "Failed to download #{url}: #{response.code}"
-    false
+    nil
   end
 rescue => e
   puts "Error downloading #{url}: #{e.message}"
-  false
+  nil
 end
 
 def process_content_images(content, post_slug)
   urls = extract_image_urls(content)
   mapping = {}
-  
+
   urls.each do |url|
     filename = File.basename(URI(url).path)
     output_path = File.join(OUTPUT_DIR, 'content', post_slug, filename)
-    
-    if download_image(url, output_path)
-      relative_path = output_path.sub(%r{^.*/static/}, '/')
+
+    webp_path = download_image(url, output_path)
+    if webp_path
+      relative_path = webp_path.sub(%r{^.*/static/}, '/')
       mapping[url] = relative_path
+
+      # Also map jpg path to webp path for already-updated markdown
+      jpg_path = relative_path.sub(/\.webp$/, '.jpg')
+      mapping[jpg_path] = relative_path if jpg_path != relative_path
     end
   end
-  
+
   mapping
 end
 
@@ -283,6 +291,21 @@ def update_content_image_paths(content, mapping)
     content = content.gsub(original_url, new_path)
   end
   content
+end
+
+def update_markdown_file(slug, url_mapping)
+  return if url_mapping.empty?
+  
+  markdown_path = File.join(POSTS_DIR, "#{slug}.md")
+  return unless File.exist?(markdown_path)
+  
+  content = File.read(markdown_path)
+  updated_content = update_content_image_paths(content, url_mapping)
+  
+  if content != updated_content
+    File.write(markdown_path, updated_content)
+    puts "  Updated markdown: #{slug}.md"
+  end
 end
 
 def fetch_posts
@@ -365,14 +388,16 @@ def main
   posts.each do |post|
     slug = post['slug']
     content = post.dig('content', 'rendered')
-    
+
     puts "\nProcessing: #{slug}"
-    
+
     mapping = process_content_images(content, slug)
     featured = fetch_featured_image(post['featured_media'], slug)
-    
+
     puts "  Content images: #{mapping.keys.length}"
     puts "  Featured image: #{featured ? 'yes' : 'no'}"
+
+    update_markdown_file(slug, mapping)
   end
   
   puts "\nDone!"

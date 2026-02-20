@@ -14,7 +14,10 @@ end
 def html_to_markdown(html)
   return '' if html.nil? || html.empty?
   
-  md = html.gsub(/<h1>(.*?)<\/h1>/, "# \\1\n\n")
+  # Convert images to markdown format (will be processed by fetch-images.rb later)
+  md = html.gsub(/<img[^>]+src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*>/, '![\\2](\\1)')
+           .gsub(/<img[^>]+src=["']([^"']+)["'][^>]*>/, '![](\\1)')
+           .gsub(/<h1>(.*?)<\/h1>/, "# \\1\n\n")
            .gsub(/<h2>(.*?)<\/h2>/, "## \\1\n\n")
            .gsub(/<h3>(.*?)<\/h3>/, "### \\1\n\n")
            .gsub(/<p>(.*?)<\/p>/m, "\\1\n\n")

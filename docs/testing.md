@@ -25,17 +25,17 @@ docker compose up -d wordpress db builder
 
 ```bash
 # Create Archived category
-docker exec wordpress php /tmp/wp term create category Archived --allow-root
+docker compose exec wordpress php /tmp/wp term create category Archived --allow-root
 
 # Create regular post
-docker exec wordpress php /tmp/wp post create \
+docker compose exec wordpress php /tmp/wp post create \
   --post_title="Regular Post" \
   --post_content="This is a regular post" \
   --post_status=publish \
   --allow-root
 
 # Create archived post
-docker exec wordpress php /tmp/wp post create \
+docker compose exec wordpress php /tmp/wp post create \
   --post_title="Archived Post" \
   --post_content="This is an archived post" \
   --post_status=publish \
@@ -48,10 +48,10 @@ docker exec wordpress php /tmp/wp post create \
 Use `http://wordpress` (Docker hostname), NOT `localhost`:
 
 ```bash
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin \
   -e WP_APPLICATION_PASSWORD=admin123 \
-  wp-builder ruby scripts/fetch-posts.rb
+  builder ruby scripts/fetch-posts.rb
 ```
 
 Check the frontmatter - archived posts should have `archived: true`
@@ -59,7 +59,7 @@ Check the frontmatter - archived posts should have `archived: true`
 #### 4. Build and Verify
 
 ```bash
-docker exec wp-builder hugo -s /app/hugo-site --minify
+docker compose exec builder hugo -s /app/hugo-site --minify
 ```
 
 Check `hugo-site/public/posts/` - archived post should have baked comments but NO Giscus widget.
@@ -75,10 +75,10 @@ Check `hugo-site/public/posts/` - archived post should have baked comments but N
 Run them via:
 
 ```bash
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin \
   -e WP_APPLICATION_PASSWORD=admin123 \
-  wp-builder ruby scripts/seed-posts.rb
+  builder ruby scripts/seed-posts.rb
 ```
 
 ## Troubleshooting
@@ -97,6 +97,6 @@ docker logs wordpress
 ### Build Issues
 
 ```bash
-docker exec wp-builder rm -rf /tmp/hugo_cache
-docker exec wp-builder hugo -s /app/hugo-site --minify
+docker compose exec builder rm -rf /tmp/hugo_cache
+docker compose exec builder hugo -s /app/hugo-site --minify
 ```

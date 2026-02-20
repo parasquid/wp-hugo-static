@@ -26,10 +26,10 @@ If starting fresh:
 
 ```bash
 # Install WP-CLI (one-time)
-docker exec wordpress sh -c 'curl -sL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp && chmod +x /tmp/wp'
+docker compose exec wordpress sh -c 'curl -sL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp && chmod +x /tmp/wp'
 
 # Install WordPress (use Docker network hostname, not localhost)
-docker exec wordpress php /tmp/wp core install \
+docker compose exec wordpress php /tmp/wp core install \
   --url=http://wordpress \
   --title="Dev Site" \
   --admin_user=admin \
@@ -44,7 +44,7 @@ Default credentials: `admin` / `admin123`
 ### 3. Install Ruby Gems (First Time)
 
 ```bash
-docker exec wp-builder bundle install --gemfile=/app/scripts/Gemfile
+docker compose exec -w /app/scripts builder bundle install
 ```
 
 Gems are cached in a volume and persist between runs.
@@ -55,17 +55,17 @@ Gems are cached in a volume and persist between runs.
 
 ```bash
 # Create Archived category
-docker exec wordpress php /tmp/wp term create category Archived --allow-root
+docker compose exec wordpress php /tmp/wp term create category Archived --allow-root
 
 # Create regular post
-docker exec wordpress php /tmp/wp post create \
+docker compose exec wordpress php /tmp/wp post create \
   --post_title="My Post" \
   --post_content="Post content here" \
   --post_status=publish \
   --allow-root
 
 # Create archived post
-docker exec wordpress php /tmp/wp post create \
+docker compose exec wordpress php /tmp/wp post create \
   --post_title="Old Post" \
   --post_content="Archived content" \
   --post_status=publish \
@@ -76,10 +76,10 @@ docker exec wordpress php /tmp/wp post create \
 ### Fetch Posts to Hugo
 
 ```bash
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin \
   -e WP_APPLICATION_PASSWORD=admin123 \
-  wp-builder ruby scripts/fetch-posts.rb
+  builder ruby scripts/fetch-posts.rb
 ```
 
 Posts are converted to Markdown and saved to `hugo-site/content/posts/`
@@ -87,7 +87,7 @@ Posts are converted to Markdown and saved to `hugo-site/content/posts/`
 ### Build Static Site
 
 ```bash
-docker exec wp-builder hugo -s /app/hugo-site --minify
+docker compose exec builder hugo -s /app/hugo-site --minify
 ```
 
 Output goes to `hugo-site/public/`
@@ -99,19 +99,19 @@ Output goes to `hugo-site/public/`
 docker compose up -d wordpress db builder
 
 # 2. Fetch posts from WordPress (use http://wordpress, NOT localhost)
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e WP_USERNAME=admin \
   -e WP_APPLICATION_PASSWORD=admin123 \
-  wp-builder ruby scripts/fetch-posts.rb
+  builder ruby scripts/fetch-posts.rb
 
 # 3. Fetch comments from GitHub (requires GITHUB_TOKEN)
-docker exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
   -e GITHUB_TOKEN=ghp_xxx \
   -e GITHUB_REPO=owner/repo \
-  wp-builder ruby scripts/fetch-comments.rb
+  builder ruby scripts/fetch-comments.rb
 
 # 4. Build Hugo site
-docker exec wp-builder hugo -s /app/hugo-site --minify
+docker compose exec builder hugo -s /app/hugo-site --minify
 ```
 
 ## Container Overview
@@ -120,7 +120,7 @@ docker exec wp-builder hugo -s /app/hugo-site --minify
 |-----------|---------|--------|
 | `wordpress` | WordPress CMS | http://localhost:8888 |
 | `mariadb` | WordPress database | Internal only |
-| `wp-builder` | Build tools (Ruby, Hugo, Go) | Use `docker exec wp-builder` |
+| `wp-builder` | Build tools (Ruby, Hugo, Go) | Use `docker compose exec builder` |
 
 ## Important: Use Docker Hostname for Scripts
 
@@ -169,14 +169,14 @@ Make sure you're using `http://wordpress` (Docker hostname), not `http://localho
 
 ```bash
 docker volume rm parabosscom_builder-vendor
-docker exec wp-builder bundle install --gemfile=/app/scripts/Gemfile
+docker compose exec -w /app/scripts builder bundle install
 ```
 
 ### Hugo build fails with module errors
 
 ```bash
-docker exec wp-builder rm -rf /tmp/hugo_cache
-docker exec wp-builder hugo -s /app/hugo-site --minify
+docker compose exec builder rm -rf /tmp/hugo_cache
+docker compose exec builder hugo -s /app/hugo-site --minify
 ```
 
 ### Reset Everything

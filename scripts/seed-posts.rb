@@ -19,7 +19,7 @@ end
 
 def http_get(uri)
   http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
+  http.use_ssl = (uri.scheme == 'https')
   request = Net::HTTP::Get.new(uri)
   request['Content-Type'] = 'application/json'
   request['Authorization'] = get_auth_header if get_auth_header
@@ -28,7 +28,7 @@ end
 
 def http_post(uri, body)
   http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
+  http.use_ssl = (uri.scheme == 'https')
   request = Net::HTTP::Post.new(uri)
   request['Content-Type'] = 'application/json'
   request['Authorization'] = get_auth_header if get_auth_header
@@ -38,7 +38,7 @@ end
 
 def http_delete(uri)
   http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
+  http.use_ssl = (uri.scheme == 'https')
   request = Net::HTTP::Delete.new(uri)
   request['Content-Type'] = 'application/json'
   request['Authorization'] = get_auth_header if get_auth_header
@@ -46,7 +46,7 @@ def http_delete(uri)
 end
 
 def find_existing_test_posts
-  uri = URI("#{WP_API_URL}?slug=#{SLUG_PREFIX}-regular-1,#{SLUG_PREFIX}-regular-2,#{SLUG_PREFIX}-archived&per_page=10")
+  uri = URI("#{WP_API_URL}/posts?slug=#{SLUG_PREFIX}-regular-1,#{SLUG_PREFIX}-regular-2,#{SLUG_PREFIX}-archived&per_page=10")
   response = http_get(uri)
   
   if response.is_a?(Net::HTTPSuccess)

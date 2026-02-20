@@ -650,7 +650,7 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 5 → Task 7 → Task 9
 
   **References**:
   - Full workflow: See README.md "Testing" section
-  - Local testing: `docker compose up`, `docker exec wp-builder ...`
+  - Local testing: `docker compose up`, `docker compose exec builder ...`
 
   **Acceptance Criteria**:
   - [ ] Complete workflow runs without errors
@@ -867,10 +867,10 @@ Critical Path: Task 1 → Task 2 → Task 3 → Task 5 → Task 7 → Task 9
 docker run wp-builder convert --version
 
 # Test image processing
-docker exec wp-builder ruby scripts/fetch-images.rb
+docker compose exec builder ruby scripts/fetch-images.rb
 
 # Verify Hugo builds
-docker exec wp-builder hugo -s /app/hugo-site --minify
+docker compose exec builder hugo -s /app/hugo-site --minify
 
 # Check processed images exist
 ls hugo-site/static/images/content/*/

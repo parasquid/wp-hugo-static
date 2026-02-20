@@ -57,3 +57,9 @@ title = 'My Site'
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
+
+[imaging]
+  quality = 85
+  resampleFilter = "lanczos"
+  [imaging.webp]
+    quality = 85
