@@ -1,40 +1,21 @@
 #!/usr/bin/env ruby
 require 'fileutils'
 
+SCRIPT_DIR = File.dirname(File.expand_path(__FILE__))
 SITE_URL = ENV.fetch('SITE_URL', 'example.com')
-OUTPUT_FILE = ENV.fetch('OUTPUT_FILE', 'hugo-site/static/images/watermark.png')
+OUTPUT_FILE = ENV.fetch('OUTPUT_FILE', File.join(SCRIPT_DIR, '..', 'hugo-site', 'static', 'images', 'watermark.png'))
 
-# Ensure output directory exists
 FileUtils.mkdir_p(File.dirname(OUTPUT_FILE))
 
 puts "Generating watermark for #{SITE_URL}..."
 
-# Create watermark using ImageMagick
-# -size 150x150: canvas size
-# -background transparent: transparent background  
-# -fill gray50: 50% gray (subtle)
-# -gravity center: center the text
-# -pointsize 24: font size (adjusted for 150px)
-# label:"SITE_URL": the text to render
-# -rotate -45: diagonal rotation for watermark effect
-# -opacity 30: make it subtle (30% opacity)
-command = <<~SHELL
-  convert \
-    -size 150x150 \
-    xc:transparent \
-    -font DejaVu-Sans \
-    -fill "gray50" \
-    -gravity center \
-    -pointsize 18 \
-    -rotate -45 \
-    label:"#{SITE_URL}" \
-    -gravity center \
-    -extent 150x150 \
-    -alpha set \
-    -channel A \
-    -evaluate set 30% \
-    "#{OUTPUT_FILE}"
-SHELL
+command = "magick -size 150x150 xc:transparent " \
+  "-fill 'gray' " \
+  "-font 'DejaVu-Sans' " \
+  "-pointsize 16 " \
+  "-gravity center " \
+  "-draw \"text 0,0 '#{SITE_URL}'\" " \
+  "'#{OUTPUT_FILE}'"
 
 system(command)
 

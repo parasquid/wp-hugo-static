@@ -51,6 +51,7 @@ ENV GOPATH="/go"
 ENV GO111MODULE="on"
 
 # Install Ruby dependencies and image processing tools
+# Note: fontconfig is REQUIRED for ImageMagick font rendering
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ruby-dev \
     build-essential \
@@ -58,12 +59,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
     imagemagick \
     libmagickwand-dev \
+    fontconfig \
     webp \
     libavif-bin \
     jpegoptim \
     optipng \
     pngquant \
+    fonts-roboto \
     && rm -rf /var/lib/apt/lists/*
+
+# Fix ImageMagick policy to use valid default font
+RUN sed -i 's|/usr/share/fonts/favorite.ttf|/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf|g' /etc/ImageMagick-7/policy.xml || true
+
+# FONTCONFIG_FILE is required for ImageMagick to find fonts
+ENV FONTCONFIG_FILE=/etc/fonts/fonts.conf
+
+# Install custom font for watermarks
+RUN mkdir -p /usr/share/fonts/truetype/custom && \
+    wget -q -O /usr/share/fonts/truetype/custom/Roboto-Regular.ttf \
+    https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Regular.ttf && \
+    wget -q -O /usr/share/fonts/truetype/custom/Roboto-Bold.ttf \
+    https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Bold.ttf && \
+    fc-cache -f -v
 
 # Set up bundler
 WORKDIR /app

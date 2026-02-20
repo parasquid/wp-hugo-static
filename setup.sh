@@ -152,6 +152,25 @@ echo "Updated hugo.toml with your configuration."
 
 echo ""
 echo "============================================"
+echo "Generating watermark..."
+echo "============================================"
+
+# Ensure hugo-site/static/images directory exists
+mkdir -p hugo-site/static/images
+
+# Generate watermark using Docker if available, otherwise note in instructions
+if command -v docker &> /dev/null && docker ps &> /dev/null; then
+    echo "Generating watermark.png with SITE_URL..."
+    docker compose run --rm -e SITE_URL="${PUBLIC_DOMAIN}" -w /app/scripts builder ruby generate-watermark.rb || true
+    echo "Watermark created at hugo-site/static/images/watermark.png"
+else
+    echo "Docker not running. To generate watermark later, run:"
+    echo "  docker compose up -d builder"
+    echo "  docker compose run --rm -e SITE_URL=${PUBLIC_DOMAIN} -w /app/scripts builder ruby generate-watermark.rb"
+fi
+
+echo ""
+echo "============================================"
 echo "Setup Complete!"
 echo "============================================"
 echo ""

@@ -30,21 +30,30 @@ Hugo's image processing partials detect browser support automatically and serve 
 
 ## Customizing the Watermark
 
-The watermark consists of your site URL tiled across the image. Two ways to customize it exist.
+The watermark consists of your site URL tiled across the image.
 
-### Option 1: Environment Variable
+### Automatic Generation
 
-Set the `SITE_URL` environment variable before running the fetch script:
+`setup.sh` automatically generates the watermark at `hugo-site/static/images/watermark.png` using your `PUBLIC_DOMAIN`.
+
+### Regenerate the Watermark
+
+To regenerate the watermark:
 
 ```bash
-SITE_URL=your-domain.com docker exec wp-builder ruby scripts/fetch-images.rb
+docker compose run --rm -e SITE_URL=your-domain.com -w /app/scripts builder ruby generate-watermark.rb
 ```
 
-The script generates a watermark with this URL automatically. If no variable gets set, the watermark displays whatever value exists in your Hugo configuration.
+### Manual Customization
 
-### Option 2: Manual Watermark
+The setup.sh generates a default watermark with your domain. You can customize it later by either:
 
-Create a custom `watermark.png` file and place it at `hugo-site/static/images/watermark.png`. Requirements:
+1. **Regenerate** - run the script with a different URL:
+   ```bash
+   docker compose run --rm -e SITE_URL=your-domain.com -w /app/scripts builder ruby generate-watermark.rb
+   ```
+
+2. **Replace** - create your own `watermark.png` at `hugo-site/static/images/watermark.png`:
 
 - Square aspect ratio works best (100x100 pixels recommended)
 - Should contain your site name, logo, or copyright text

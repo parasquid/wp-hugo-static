@@ -8,7 +8,9 @@ require 'image_optim'
 
 WP_API_URL = ENV.fetch('WP_API_URL', 'https://your-domain.com/wp-json/wp/v2')
 OUTPUT_DIR = ENV.fetch('OUTPUT_DIR', 'hugo-site/static/images')
-WATERMARK_PATH = File.join(OUTPUT_DIR, 'watermark.png')
+SCRIPT_DIR = File.dirname(File.expand_path(__FILE__))
+# Watermark always in static/images regardless of OUTPUT_DIR
+WATERMARK_PATH = File.join(SCRIPT_DIR, '..', 'hugo-site', 'static', 'images', 'watermark.png')
 
 # Image processing configuration
 MAX_LANDSCAPE_WIDTH = 1920
@@ -72,44 +74,46 @@ def apply_tiled_watermark(path)
   return unless File.exist?(WATERMARK_PATH)
   
   puts "  Applying tiled watermark: #{File.basename(path)}"
-  image = MiniMagick::Image.open(path)
-  watermark = MiniMagick::Image.open(WATERMARK_PATH)
   
-  watermark.resize "#{WATERMARK_SIZE}x#{WATERMARK_SIZE}!"
-  watermark.alpha 'set'
-  watermark.background 'none'
+  img = MiniMagick::Image.open(path)
+  wm = MiniMagick::Image.open(WATERMARK_PATH)
   
-  img_width = image.width
-  img_height = image.height
-  wm_width = watermark.width
-  wm_height = watermark.height
+  img_width = img.width
+  img_height = img.height
+  wm_width = wm.width
+  wm_height = wm.height
   
-  tile_width = img_width / WATERMARK_TILES
-  tile_height = img_height / WATERMARK_TILES
+  tile_count = 4
+  tile_w = img_width / tile_count
+  tile_h = img_height / tile_count
   
-  WATERMARK_TILES.times do |row|
-    WATERMARK_TILES.times do |col|
-      x_offset = (col * tile_width) + (tile_width - wm_width) / 2
-      y_offset = (row * tile_height) + (tile_height - wm_height) / 2
+  temp_canvas = "/tmp/canvas_#{$$}.png"
+  `convert -size #{img_width}x#{img_height} xc:transparent #{temp_canvas}`
+  
+  tile_count.times do |row|
+    tile_count.times do |col|
+      x = col * tile_w + (tile_w - wm_width) / 2
+      y = row * tile_h + (tile_h - wm_height) / 2
       
-      x_offset += rand(-WATERMARK_JITTER..WATERMARK_JITTER)
-      y_offset += rand(-WATERMARK_JITTER..WATERMARK_JITTER)
+      x += rand(-20..20)
+      y += rand(-20..20)
       
-      x_offset = [0, [x_offset, img_width - wm_width].min].max
-      y_offset = [0, [y_offset, img_height - wm_height].min].max
+      x = [0, [x, img_width - wm_width].min].max
+      y = [0, [y, img_height - wm_height].min].max
       
-      watermark_copy = watermark.dup
-      watermark_copy.alpha 'set'
-      watermark_copy.channel 'A'
-      watermark_copy.evaluate 'multiply', WATERMARK_OPACITY.to_s
-      image = image.composite(watermark_copy) do |c|
-        c.geometry "+#{x_offset}+#{y_offset}"
-      end
+      rotated = "/tmp/wm_rotated_#{$$}.png"
+      rotation = rand(-30..30)
+      `convert #{WATERMARK_PATH} -background none -rotate #{rotation} -alpha set #{rotated}`
+      
+      `composite -geometry +#{x}+#{y} -dissolve 20 #{rotated} #{temp_canvas} #{temp_canvas}`
+      File.delete(rotated) if File.exist?(rotated)
     end
   end
   
-  image.write(path)
-  puts "    Watermark applied (#{WATERMARK_TILES}x#{WATERMARK_TILES} tiles)"
+  `composite -compose over #{temp_canvas} #{path} #{path}`
+  File.delete(temp_canvas) if File.exist?(temp_canvas)
+  
+  puts "    Watermark applied (#{tile_count}x#{tile_count} tiles)"
 end
 
 def convert_to_webp_only(path)
@@ -303,7 +307,58 @@ def fetch_posts
   posts
 end
 
+
+# Generate watermark dynamically using ImageMagick
+# Key fix: use exact font name from `convert -list font` output
+def generate_watermark(text, output_path, size: 100)
+  puts "  Generating watermark: #{text}"
+  
+  # Must use exact font name from ImageMagick's font list (case-sensitive)
+  font_name = "DejaVu-Sans"
+  
+  # Calculate size based on text length
+  width = [text.length * 12, 120].max
+  height = 30
+  
+  # Escape single quotes in text
+  safe_text = text.gsub("'", "'\\''")
+  
+  # Use convert directly with explicit font name
+  cmd = "convert -size #{width}x#{height} xc:transparent -font '#{font_name}' " \
+        "-pointsize 14 -fill white -gravity center -annotate +0+0 '#{safe_text}' #{output_path}"
+  
+  result = system(cmd)
+  
+  if result && File.exist?(output_path)
+    puts "    Watermark created: #{output_path}"
+    
+    # Resize to desired size
+    image = MiniMagick::Image.open(output_path)
+    image.resize "#{size}x#{size}!"
+    image.write output_path
+    puts "    Resized to #{size}x#{size}"
+    
+    true
+  else
+    puts "    ERROR: Watermark creation failed"
+    false
+  end
+end
+
+# Ensure watermark exists, generate if missing
+def ensure_watermark(site_url)
+  return if File.exist?(WATERMARK_PATH)
+  
+  FileUtils.mkdir_p(File.dirname(WATERMARK_PATH))
+  
+  # Extract domain from URL
+  domain = URI(site_url).host rescue site_url
+  generate_watermark(domain, WATERMARK_PATH)
+end
+
 def main
+  # Ensure watermark exists before processing images
+  ensure_watermark(ENV.fetch("PUBLIC_DOMAIN", "example.com"))
   puts "Fetching posts and downloading images..."
   posts = fetch_posts
   
