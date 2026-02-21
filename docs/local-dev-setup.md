@@ -138,6 +138,45 @@ This is because the builder container is on the same Docker network as WordPress
 
 From your host machine (browser), use **http://localhost:8888** to access WordPress.
 
+## Accessing WordPress Remotely (Tailscale, VPN, etc.)
+
+By default, WordPress redirects to `localhost:8888` which won't work on remote devices. To access WordPress via Tailscale or other remote connections:
+
+### 1. Get Your Tailscale IP
+
+```bash
+tailscale ip -4
+```
+
+### 2. Update WordPress Site URLs
+
+```bash
+# Replace with your actual Tailscale IP
+TAILSCALE_IP="100.x.x.x"
+
+docker compose exec db mysql -u root -p"${DB_ROOT_PASSWORD}" wordpress -e \
+  "UPDATE wp_options SET option_value='http://${TAILSCALE_IP}:8888' WHERE option_name IN ('siteurl', 'home');"
+```
+
+### 3. Access Remotely
+
+On your remote device, go to:
+```
+http://<tailscale-ip>:8888
+```
+
+### Note on Dynamic IPs
+
+If your Tailscale IP changes, you'll need to update the URLs again:
+
+```bash
+TAILSCALE_IP=$(tailscale ip -4)
+docker compose exec db mysql -u root -p"${DB_ROOT_PASSWORD}" wordpress -e \
+  "UPDATE wp_options SET option_value='http://${TAILSCALE_IP}:8888' WHERE option_name IN ('siteurl', 'home');"
+```
+
+To find your `DB_ROOT_PASSWORD`, check the `.env` file.
+
 ## Environment Variables
 
 Set these when running scripts:
@@ -149,6 +188,7 @@ Set these when running scripts:
 | `WP_APPLICATION_PASSWORD` | WP app password | (see below) |
 | `GITHUB_TOKEN` | GitHub PAT for Discussions | `ghp_xxx` |
 | `GITHUB_REPO` | GitHub repo (owner/repo) | `parasquid/wp-hugo-static` |
+| `DB_ROOT_PASSWORD` | MariaDB root password | (from `.env` file) |
 
 ### Getting WordPress Application Password
 
