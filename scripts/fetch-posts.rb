@@ -4,8 +4,13 @@ require 'json'
 require 'fileutils'
 require 'date'
 
-WP_API_URL = ENV.fetch('WP_API_URL', 'https://your-domain.com/wp-json/wp/v2')
-OUTPUT_DIR = ENV.fetch('OUTPUT_DIR', 'hugo-site/content/posts')
+def wp_api_url
+  ENV.fetch('WP_API_URL', 'https://your-domain.com/wp-json/wp/v2')
+end
+
+def output_dir
+  ENV.fetch('OUTPUT_DIR', 'hugo-site/content/posts')
+end
 
 def clean_filename(title)
   title.downcase.gsub(/[^\w\s-]/, '').gsub(/[-\s]+/, '-')[0, 50]
@@ -31,7 +36,7 @@ def html_to_markdown(html)
 end
 
 def fetch_post_categories(post_id)
-  uri = URI("#{WP_API_URL}/posts/#{post_id}?_fields=categories")
+    uri = URI("#{wp_api_url}/posts/#{post_id}?_fields=categories")
   response = Net::HTTP.get_response(uri)
 
   if response.is_a?(Net::HTTPSuccess)
@@ -45,7 +50,7 @@ end
 def fetch_category_name(category_id)
   return nil if category_id.nil? || category_id == 0
 
-  uri = URI("#{WP_API_URL}/categories/#{category_id}?_fields=name")
+    uri = URI("#{wp_api_url}/categories/#{category_id}?_fields=name")
   response = Net::HTTP.get_response(uri)
 
   if response.is_a?(Net::HTTPSuccess)
@@ -73,7 +78,7 @@ def fetch_posts
   page = 1
   
   loop do
-    uri = URI("#{WP_API_URL}/posts?page=#{page}&per_page=100&status=publish")
+    uri = URI("#{wp_api_url}/posts?page=#{page}&per_page=100&status=publish")
     
     begin
       response = Net::HTTP.get_response(uri)
@@ -122,9 +127,9 @@ def process_post(post, archived = false)
   frontmatter['archived'] = true if archived
   
   filename = "#{post['slug']}.md"
-  filepath = File.join(OUTPUT_DIR, filename)
+  filepath = File.join(output_dir, filename)
   
-  FileUtils.mkdir_p(OUTPUT_DIR)
+  FileUtils.mkdir_p(output_dir)
   
   File.open(filepath, 'w:UTF-8') do |f|
     f.puts '---'
