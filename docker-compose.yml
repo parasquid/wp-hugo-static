@@ -41,14 +41,73 @@ services:
         define('AUTOMATIC_UPDATER_DISABLED', true);
         define('WP_AUTO_UPDATE_CORE', false);
     volumes:
-      - wp-content:/var/www/html/wp-content
+      - wp-html:/var/www/html
     networks:
       - wp-network
     depends_on:
       - db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     labels:
       - wud.tag.include=^6\.4-apache$
       - wud.trigger=docker-compose
+
+  seeder:
+    image: wordpress:cli
+    restart: "no"
+    networks:
+      - wp-network
+    depends_on:
+      wordpress:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+      WORDPRESS_DB_NAME: wordpress
+      WP_HOST: ${WP_HOST:-wordpress}
+    volumes:
+      - wp-html:/var/www/html
+      - ./scripts/seed-wordpress.sh:/seed.sh:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        curl -sO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+        chmod +x wp-cli.phar
+        mv wp-cli.phar /usr/local/bin/wp
+        
+        cd /var/www/html
+        
+        echo "Checking for WordPress installation..."
+        if wp core is-installed --allow-root 2>/dev/null; then
+          echo "WordPress already installed!"
+        else
+          echo "Installing WordPress via WP-CLI..."
+          wp core install \
+            --url="http://${WP_HOST:-wordpress}:8888" \
+            --title="wp-hugo-static" \
+            --admin_user=admin \
+            --admin_password=admin \
+            --admin_email="admin@example.com" \
+            --skip-email \
+            --allow-root
+          echo "WordPress installed!"
+        fi
+        
+        if wp option get seeded --allow-root 2>/dev/null; then
+          echo "Already seeded, skipping."
+        else
+          echo "Seeding..."
+          cp /seed.sh /tmp/seed.sh
+          chmod +x /tmp/seed.sh
+          /tmp/seed.sh
+          wp option add seeded 1 --allow-root
+          echo "Done!"
+        fi
 
   db:
     image: mariadb:10.11
@@ -86,7 +145,7 @@ services:
 
 volumes:
   db-data:
-  wp-content:
+  wp-html:
   wud-store:
   builder-vendor:
 
