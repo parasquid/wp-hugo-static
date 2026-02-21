@@ -48,6 +48,15 @@ WordPress to Hugo static site converter with baked comments. WordPress content â
 - Posts: Markdown in hugo-site/content/posts/
 - Archives: posts with "Archived" category get `archived: true` frontmatter
 
+## CRITICAL: specs/ IS ALWAYS IMPORTANT
+
+**Everything in `specs/` (including `specs/drafts/`) is always important.**
+
+- Never delete or offer to delete files from `specs/`
+- Never suggest cleaning up `specs/` as optional
+- Always add `specs/` files to git when created
+- This includes draft documents - they are intentionally in drafts/ but still valuable
+
 ## ANTI-PATTERNS
 
 - Don't use `docker exec` - always use `docker compose exec` or `docker compose run`
