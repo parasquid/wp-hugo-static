@@ -11,6 +11,8 @@
 - Wait for explicit "yes" before running `git push`
 - Never commit or push automatically, even if changes seem correct
 
+**NEVER commit without explicit permission. This is a hard rule.**
+
 ## OVERVIEW
 
 WordPress to Hugo static site converter with baked comments. WordPress content → Ruby scripts → Hugo → Cloudflare Pages.
