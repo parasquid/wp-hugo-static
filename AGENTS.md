@@ -142,6 +142,37 @@ docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
 - **Don't overthink** which one to use - both work
 - The symlink exists for Oh My OpenCode compatibility while keeping the `specs/` convention
 
+### RSpec-Given Syntax (CRITICAL)
+
+**DO NOT use string descriptions with `And` or `Then` blocks in rspec-given.**
+
+```ruby
+# WRONG - This causes ArgumentError: wrong number of arguments
+And('creates markdown files') do
+  expect(files.count).to be > 0
+end
+
+# CORRECT - No string argument, just the block
+And { expect(files.count).to be > 0 }
+
+# CORRECT - Then without description
+Then { expect(result).to be_success }
+```
+
+**Key differences from standard RSpec:**
+- `it('description') { }` - RSpec way (OK)
+- `Then('description') { }` - WRONG in rspec-given
+- `Then { expectation }` - CORRECT rspec-given syntax
+- `And('description') { }` - WRONG in rspec-given
+- `And { expectation }` - CORRECT rspec-given syntax
+
+**rspec-given keywords:**
+- `Given(:var) { value }` - Setup variable
+- `Given!(:var) { value }` - Setup with eager evaluation
+- `When(:result) { action }` - Execute code under test
+- `Then { expectation }` - Assert results (no string arg!)
+- `And { expectation }` - Additional assertions (no string arg!)
+
 ### NOTES
 
 - Builder container uses host network mode for localhost access

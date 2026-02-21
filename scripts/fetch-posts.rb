@@ -74,7 +74,13 @@ def fetch_posts
   
   loop do
     uri = URI("#{WP_API_URL}/posts?page=#{page}&per_page=100&status=publish")
-    response = Net::HTTP.get_response(uri)
+    
+    begin
+      response = Net::HTTP.get_response(uri)
+    rescue StandardError => e
+      puts "Error connecting to WordPress API: #{e.message}"
+      break
+    end
     
     if response.is_a?(Net::HTTPSuccess)
       batch = JSON.parse(response.body)

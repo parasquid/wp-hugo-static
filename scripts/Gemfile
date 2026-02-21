@@ -6,3 +6,9 @@ gem 'httparty', '~> 0.21'
 gem 'nokogiri', '~> 1.15'
 gem 'mini_magick', '~> 4.12'
 gem 'image_optim', '~> 0.31'
+
+group :test do
+  gem 'rspec', '~> 3.12'
+  gem 'rspec-given', '~> 3.8'
+  gem 'webrick', '~> 1.8'
+end

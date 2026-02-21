@@ -1,9 +1,7 @@
 {
-  "active_plan": "/home/tristan/Documents/parasquid/wp-hugo-static/specs/plans/20260219073000-image-optimization.md",
-  "started_at": "2026-02-19T14:32:00.000Z",
-  "session_ids": [
-    "ses_3899921ffffeD2KQmgQPuLw541"
-  ],
-  "plan_name": "20260219073000-image-optimization",
+  "active_plan": "/home/tristan/Documents/parasquid/wp-hugo-static/specs/plans/20260220094500-e2e-rspec-test-suite.md",
+  "started_at": "2026-02-20T22:04:00.000Z",
+  "session_ids": [],
+  "plan_name": "20260220094500-e2e-rspec-test-suite",
   "agent": "sisyphus"
 }

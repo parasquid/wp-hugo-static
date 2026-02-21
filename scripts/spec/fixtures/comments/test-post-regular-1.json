@@ -1,0 +1,22 @@
+{
+  "comments": [
+    {
+      "author": "alice",
+      "body": "Great post! Thanks for sharing.",
+      "createdAt": "2024-01-15T12:00:00Z",
+      "url": "https://github.com/test/repo/discussions/1#discussioncomment-1"
+    },
+    {
+      "author": "bob",
+      "body": "Very helpful, I learned a lot.",
+      "createdAt": "2024-01-16T08:30:00Z",
+      "url": "https://github.com/test/repo/discussions/1#discussioncomment-2"
+    },
+    {
+      "author": "charlie",
+      "body": "Would love to see more content like this!",
+      "createdAt": "2024-01-17T14:15:00Z",
+      "url": "https://github.com/test/repo/discussions/1#discussioncomment-3"
+    }
+  ]
+}

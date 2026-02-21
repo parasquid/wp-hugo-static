@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-test-}"
+
+FULL_MODE=false
+FAST_MODE=false
+
+for arg in "$@"; do
+  case $arg in
+    --full)
+      FULL_MODE=true
+      shift
+      ;;
+    --fast)
+      FAST_MODE=true
+      shift
+      ;;
+  esac
+done
+
+cleanup() {
+  echo "Cleaning up test containers..."
+  docker compose -p "$COMPOSE_PROJECT_NAME" down -v --remove-orphans 2>/dev/null || true
+}
+
+trap cleanup EXIT
+
+cd "$PROJECT_ROOT"
+
+echo "Running RSpec tests..."
+echo "Project namespace: $COMPOSE_PROJECT_NAME"
+
+if [ "$FULL_MODE" = true ]; then
+  echo "Mode: Full integration tests"
+  bundle exec rspec --format documentation
+elif [ "$FAST_MODE" = true ]; then
+  echo "Mode: Fast tests (skipping slow integration)"
+  bundle exec rspec --tag ~slow --format documentation
+else
+  echo "Mode: Default (fast tests, use --full for all tests)"
+  bundle exec rspec --tag ~slow --format documentation
+fi
+
+echo ""
+echo "All tests passed!"
