@@ -148,34 +148,52 @@ By default, WordPress redirects to `localhost:8888` which won't work on remote d
 tailscale ip -4
 ```
 
-### 2. Update WordPress Site URLs
-
+Or use Tailscale magic DNS (your hostname + `.tail-scale.ts.net`):
 ```bash
-# Replace with your actual Tailscale IP
-TAILSCALE_IP="100.x.x.x"
-
-docker compose exec db mysql -u root -p"${DB_ROOT_PASSWORD}" wordpress -e \
-  "UPDATE wp_options SET option_value='http://${TAILSCALE_IP}:8888' WHERE option_name IN ('siteurl', 'home');"
+# Example: debian-vm.tail-scale.ts.net
 ```
 
-### 3. Access Remotely
+### 2. Set WP_HOST Environment Variable
+
+Add to your `.env` file:
+
+```bash
+# Option A: Use Tailscale IP
+WP_HOST=100.x.x.x
+
+# Option B: Use magic DNS hostname
+WP_HOST=debian-vm.tail-scale.ts.net
+```
+
+### 3. Restart WordPress
+
+```bash
+docker compose up -d wordpress
+```
+
+### 4. Access Remotely
 
 On your remote device, go to:
 ```
 http://<tailscale-ip>:8888
 ```
+or
+```
+http://<your-hostname>.tail-scale.ts.net:8888
+```
 
 ### Note on Dynamic IPs
 
-If your Tailscale IP changes, you'll need to update the URLs again:
+If your Tailscale IP changes, update `.env` and restart:
 
 ```bash
-TAILSCALE_IP=$(tailscale ip -4)
-docker compose exec db mysql -u root -p"${DB_ROOT_PASSWORD}" wordpress -e \
-  "UPDATE wp_options SET option_value='http://${TAILSCALE_IP}:8888' WHERE option_name IN ('siteurl', 'home');"
-```
+# Get new IP
+tailscale ip -4
 
-To find your `DB_ROOT_PASSWORD`, check the `.env` file.
+# Update .env with new IP
+# Then restart
+docker compose up -d wordpress
+```
 
 ## Environment Variables
 

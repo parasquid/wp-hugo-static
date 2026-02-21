@@ -34,9 +34,10 @@ services:
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
       WORDPRESS_DB_NAME: wordpress
+      WP_HOST: ${WP_HOST:-wordpress}
       WORDPRESS_CONFIG_EXTRA: |
-        define('WP_HOME', 'http://${WP_HOST:-wordpress}');
-        define('WP_SITEURL', 'http://${WP_HOST:-wordpress}');
+        define('WP_HOME', 'http://${WP_HOST:-wordpress}:8888');
+        define('WP_SITEURL', 'http://${WP_HOST:-wordpress}:8888');
         define('AUTOMATIC_UPDATER_DISABLED', true);
         define('WP_AUTO_UPDATE_CORE', false);
     volumes:
