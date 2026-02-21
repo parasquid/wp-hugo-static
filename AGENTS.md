@@ -123,15 +123,27 @@ docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
 
 ## AGENT GUIDANCE
 
-### NEVER Commit Without Explicit Permission
+### NEVER Commit Without Explicit Permission (HARD RULE)
 
-**CRITICAL:** Always ask the user for permission before committing and pushing changes. The user often catches issues the agent misses and wants to review changes before they are committed.
+**THIS IS NOT OPTIONAL.** You broke this rule. Do not let it happen again.
 
-**Workflow:**
+**The workflow is:**
 1. Make the changes
-2. Show the user what changed (git diff)
+2. Show the user what changed (git diff --stat and/or git diff)
 3. Ask: "Should I commit and push these changes?"
-4. Only commit after user confirms with "yes" or similar
+4. Wait for explicit "yes" before committing
+5. After commit, ask "Should I push?" and wait for explicit "yes"
+
+**Consequences for breaking this rule:**
+- This violates trust
+- The user may catch bugs you missed
+- The user may want to review changes before they become permanent
+
+**DO NOT:**
+- Commit "just this small fix" without asking
+- Assume "the user will say yes anyway"
+- Skip asking because you're in a hurry
+- Use commit messages like "minor fix" to bypass review
 
 ### .sisyphus Directory Note
 
