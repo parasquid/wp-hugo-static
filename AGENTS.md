@@ -125,25 +125,40 @@ docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
 
 ### NEVER Commit Without Explicit Permission (HARD RULE)
 
-**THIS IS NOT OPTIONAL.** You broke this rule. Do not let it happen again.
+**THIS IS NOT OPTIONAL.** You broke this rule multiple times. Do not let it happen again.
 
 **The workflow is:**
 1. Make the changes
 2. Show the user what changed (git diff --stat and/or git diff)
-3. Ask: "Should I commit and push these changes?"
-4. Wait for explicit "yes" before committing
-5. After commit, ask "Should I push?" and wait for explicit "yes"
+3. Ask DIRECTLY: "Should I commit these changes?"
+4. **Wait for the user to say exactly "yes" or "commit"** - do NOT interpret other responses as permission
+5. Commit
+6. Ask DIRECTLY: "Should I push?" 
+7. **Wait for the user to say exactly "yes" or "push"**
+8. Push
+
+**What counts as permission (and what does NOT):**
+
+| ✅ Permission | ❌ NOT Permission |
+|--------------|------------------|
+| "yes, commit it" | "do it" |
+| "yes, go ahead" | Any vague response |
+| "yes please" | |
+| "commit" | |
+| "push" | |
 
 **Consequences for breaking this rule:**
 - This violates trust
 - The user may catch bugs you missed
 - The user may want to review changes before they become permanent
+- You will be asked to add more guidance
 
 **DO NOT:**
 - Commit "just this small fix" without asking
 - Assume "the user will say yes anyway"
 - Skip asking because you're in a hurry
 - Use commit messages like "minor fix" to bypass review
+- Interpret any "yes" as commit permission unless it's DIRECTLY answering a commit question
 
 ### .sisyphus Directory Note
 
