@@ -56,7 +56,7 @@ WordPress to Hugo static site converter with baked comments. WordPress content �
 ├── .env.example          # Environment template
 ├── scripts/              # Ruby conversion scripts
 ├── hugo-site/           # Hugo static site source
-├── .github/workflows/   # CI/CD (deploy.yml)
+├── .github/workflows/   # CI/CD workflows (if configured)
 ├── docs/                # User documentation
 └── specs/               # Planning documents
 ```
@@ -69,7 +69,7 @@ WordPress to Hugo static site converter with baked comments. WordPress content �
 | Build container | Dockerfile.builder | Ruby 3.4, Hugo 0.131, Go 1.24 |
 | WP→Hugo scripts | scripts/*.rb | fetch-posts, fetch-comments, seed-* |
 | Hugo site | hugo-site/ | Stack theme, Hugo Modules |
-| CI/CD | .github/workflows/deploy.yml | Cloudflare Pages |
+| Deployment flow | docs/workflow-reference.md | Local direct deploy runbook |
 | Docs | docs/*.md | local-dev-setup, testing, hybrid-content |
 
 ## CONVENTIONS

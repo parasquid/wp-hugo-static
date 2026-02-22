@@ -78,6 +78,12 @@ Located at `lib/sync.rb`, this module provides:
 
 ## Usage
 
+## Deployment Mode Note
+
+- The canonical production deployment flow is manual local deploy via `scripts/deploy-local.sh`.
+- `scripts/mu-plugins/sync-webhook.php` and `scripts/sync-server.rb` keep local Hugo content in sync, but they do not deploy by themselves.
+- Legacy GitHub repository dispatch trigger (`scripts/wp-webhook.php` with `event_type: wordpress-publish`) is non-primary and optional.
+
 ### Starting the sync system
 
 ```bash

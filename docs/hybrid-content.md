@@ -9,8 +9,8 @@ This project supports three types of content, allowing you to choose the best ap
 **How it works**:
 - Write in WordPress admin
 - Automatically imported by `scripts/fetch-posts.rb`
-- Converted to Hugo markdown during CI/CD build
-- Triggered by webhook on publish
+- Converted to Hugo markdown during local build
+- Included when you run `scripts/deploy-local.sh`
 
 **Location after import**: `hugo-site/content/posts/`
 

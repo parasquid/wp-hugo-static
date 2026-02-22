@@ -92,6 +92,22 @@ docker compose exec builder hugo -s /app/hugo-site --minify
 
 Output goes to `hugo-site/public/`
 
+### Deploy to Cloudflare Pages (Canonical Production Path)
+
+```bash
+./scripts/deploy-local.sh
+```
+
+Required environment variables:
+- `WP_API_URL`
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_PAGES_PROJECT`
+
+Optional for baked comments:
+- `GITHUB_TOKEN`
+- `GITHUB_REPO`
+
 ### Full Workflow
 
 ```bash
