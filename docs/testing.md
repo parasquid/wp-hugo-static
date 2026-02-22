@@ -19,11 +19,12 @@ The project includes an automated E2E test that runs the full pipeline: WordPres
 1. **Cleans up** previous test containers and data
 2. **Starts** test containers: WordPress, MariaDB, builder, seeder
 3. **Waits** for WordPress to be ready
-4. **Fetches** posts from WordPress REST API
-5. **Verifies** posts were created
-6. **Builds** Hugo site
-7. **Verifies** Hugo build output exists
-8. **Cleans up** containers and volumes
+4. **Waits** for seeded posts endpoint to be ready
+5. **Fetches** posts from WordPress REST API
+6. **Verifies** posts were created
+7. **Builds** Hugo site
+8. **Verifies** Hugo build output exists
+9. **Cleans up** containers and volumes
 
 ### Test Container Details
 
@@ -35,7 +36,7 @@ The project includes an automated E2E test that runs the full pipeline: WordPres
 
 ### Gotchas
 
-- **Takes ~2 minutes** (waits 90s for WordPress to start)
+- **Duration varies** (uses readiness polling instead of fixed sleeps)
 - **Requires Docker** to be running
 - Cleans up ALL test containers before starting (safe to run multiple times)
 - Test WordPress uses `test-wordpress` hostname (not `wordpress`)

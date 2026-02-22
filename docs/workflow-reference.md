@@ -35,7 +35,9 @@ docker compose exec wordpress php /tmp/wp post create \
 
 ```bash
 docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
-  -e OUTPUT_DIR=/app/hugo-site/content/posts \
+  -e POSTS_OUTPUT_DIR=/app/hugo-site/content/posts \
+  -e PAGES_OUTPUT_DIR=/app/hugo-site/content/pages \
+  -e STATE_FILE=/app/hugo-site/.last-sync \
   builder ruby scripts/fetch-posts.rb
 ```
 
@@ -65,7 +67,9 @@ ls hugo-site/public/images/
 | Variable | Value | Required For |
 |----------|-------|--------------|
 | `WP_API_URL` | `http://wordpress/wp-json/wp/v2` | All scripts |
-| `OUTPUT_DIR` | `/app/hugo-site/content/posts` | fetch-posts.rb |
+| `POSTS_OUTPUT_DIR` | `/app/hugo-site/content/posts` | fetch-posts.rb |
+| `PAGES_OUTPUT_DIR` | `/app/hugo-site/content/pages` | fetch-pages.rb |
+| `STATE_FILE` | `/app/hugo-site/.last-sync` | incremental sync state |
 | `SITE_URL` | Your site URL | fetch-images.rb (watermark) |
 
 ## File Paths (Inside Container)
@@ -81,7 +85,7 @@ ls hugo-site/public/images/
 
 ```bash
 docker compose exec wordpress php /tmp/wp post create --post_title="Test $(date +%s)" --post_content="<p>Test</p>" --post_status=publish --allow-root && \
-docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 -e OUTPUT_DIR=/app/hugo-site/content/posts builder ruby scripts/fetch-posts.rb && \
+docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 -e POSTS_OUTPUT_DIR=/app/hugo-site/content/posts -e PAGES_OUTPUT_DIR=/app/hugo-site/content/pages -e STATE_FILE=/app/hugo-site/.last-sync builder ruby scripts/fetch-posts.rb && \
 docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 -e SITE_URL=http://example.com -w /app/scripts builder bundle exec ruby fetch-images.rb && \
 docker compose exec builder hugo -s /app/hugo-site --minify
 ```
@@ -90,7 +94,7 @@ docker compose exec builder hugo -s /app/hugo-site --minify
 
 ```bash
 # Clear Hugo content
-rm -rf hugo-site/content/posts/* hugo-site/static/images/content/*
+rm -rf hugo-site/content/* hugo-site/static/images/content/*
 
 # Clear Hugo cache
 docker compose exec builder rm -rf /tmp/hugo_cache
