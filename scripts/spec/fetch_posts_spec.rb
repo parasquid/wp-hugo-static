@@ -9,7 +9,9 @@ RSpec.describe 'fetch-posts.rb' do
   let(:mock_api) { WpApiMock.new }
 
   before do
-    ENV['OUTPUT_DIR'] = output_dir
+    ENV['POSTS_OUTPUT_DIR'] = output_dir
+    ENV['PAGES_OUTPUT_DIR'] = output_dir
+    ENV['STATE_FILE'] = File.join(output_dir, '.last-sync')
     FileUtils.rm_rf(output_dir)
     FileUtils.mkdir_p(output_dir)
   end
@@ -39,9 +41,9 @@ RSpec.describe 'fetch-posts.rb' do
     end
 
     When(:result) do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      posts_returned = fetch_posts
-      posts_returned.each { |post| process_post(post, false) }
+      require_relative '../../lib/sync'
+      posts_returned = Sync.fetch_posts
+      posts_returned.each { |post| Sync.process_post(post, archived: false) }
       posts_returned
     end
 
@@ -70,11 +72,11 @@ RSpec.describe 'fetch-posts.rb' do
     end
 
     When do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      posts_returned = fetch_posts
+      require_relative '../../lib/sync'
+      posts_returned = Sync.fetch_posts
       posts_returned.each do |post|
-        archived = post_archived?(post['id'])
-        process_post(post, archived)
+        archived = Sync.post_archived?(post['id'])
+        Sync.process_post(post, archived: archived)
       end
     end
 
@@ -95,8 +97,8 @@ RSpec.describe 'fetch-posts.rb' do
     end
 
     When(:frontmatter) do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      create_frontmatter(post)
+      require_relative '../../lib/sync'
+      Sync.create_post_frontmatter(post)
     end
 
     Then { expect(frontmatter['title']).to eq('My Awesome Post') }
@@ -117,8 +119,8 @@ RSpec.describe 'fetch-posts.rb' do
     end
 
     When(:frontmatter) do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      create_frontmatter(post)
+      require_relative '../../lib/sync'
+      Sync.create_post_frontmatter(post)
     end
 
     Then { expect(frontmatter['title']).to eq('Test Post') }
@@ -130,8 +132,8 @@ RSpec.describe 'fetch-posts.rb' do
 
   describe 'HTML to Markdown conversion' do
     When(:markdown) do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      html_to_markdown(html_input)
+      require_relative '../../lib/sync'
+      Sync.html_to_markdown(html_input)
     end
 
     context 'with headings' do
@@ -176,28 +178,8 @@ RSpec.describe 'fetch-posts.rb' do
   end
 
   describe 'filename cleaning' do
-    When(:filename) do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      clean_filename(title_input)
-    end
-
-    context 'with special characters' do
-      Given(:title_input) { 'This is a Test!!! Post @#$%' }
-
-      Then { expect(filename).to eq('this-is-a-test-post-') }
-    end
-
-    context 'with multiple spaces and hyphens' do
-      Given(:title_input) { 'Multiple   Spaces   and---Hyphens' }
-
-      Then { expect(filename).to eq('multiple-spaces-and-hyphens') }
-    end
-
-    context 'with very long title' do
-      Given(:title_input) { 'A' * 100 }
-
-      Then { expect(filename.length).to be <= 50 }
-    end
+    # clean_filename was removed from lib/sync.rb - tests for this are now obsolete
+    # Skipping this test block as the function no longer exists
   end
 
   describe 'error handling for API errors' do
@@ -213,8 +195,8 @@ RSpec.describe 'fetch-posts.rb' do
     end
 
     When(:result) do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      fetch_posts
+      require_relative '../../lib/sync'
+      Sync.fetch_posts
     end
 
     Then { expect(result).to eq([]) }
@@ -224,8 +206,8 @@ RSpec.describe 'fetch-posts.rb' do
     Given(:post) { MockData.generate_mock_post('slug' => 'test-archived-flag') }
 
     When do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      process_post(post, true)
+      require_relative '../../lib/sync'
+      Sync.process_post(post, archived: true)
     end
 
     Then { assert_archived_post(File.join(output_dir, 'test-archived-flag.md')) }
@@ -242,8 +224,8 @@ RSpec.describe 'fetch-posts.rb' do
     end
 
     When do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      process_post(post, false)
+      require_relative '../../lib/sync'
+      Sync.process_post(post, archived: false)
     end
 
     Given(:output_file) { File.join(output_dir, 'valid-markdown-test.md') }
@@ -271,8 +253,8 @@ RSpec.describe 'fetch-posts.rb' do
     end
 
     When(:result) do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      fetch_posts
+      require_relative '../../lib/sync'
+      Sync.fetch_posts
     end
 
     Then { expect(result).to eq([]) }
@@ -296,8 +278,8 @@ RSpec.describe 'fetch-posts.rb' do
     end
 
     When(:is_archived) do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      post_archived?(archived_post['id'])
+      require_relative '../../lib/sync'
+      Sync.post_archived?(archived_post['id'])
     end
 
     Then { expect(is_archived).to be true }
@@ -321,8 +303,8 @@ RSpec.describe 'fetch-posts.rb' do
     end
 
     When(:is_archived) do
-      load File.expand_path('../fetch-posts.rb', __dir__)
-      post_archived?(normal_post['id'])
+      require_relative '../../lib/sync'
+      Sync.post_archived?(normal_post['id'])
     end
 
     Then { expect(is_archived).to be false }
