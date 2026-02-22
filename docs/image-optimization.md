@@ -4,29 +4,31 @@ wp-hugo-static automatically optimizes images during the fetch process. This doc
 
 ## How Image Processing Works
 
-The image processing pipeline runs automatically when you execute `scripts/fetch-images.rb`. Each image goes through several stages:
+The image processing pipeline runs automatically when you execute `scripts/fetch-images.rb`. Each image goes through these stages:
 
 1. **Download** - Images are fetched from WordPress and saved to `hugo-site/static/images/`
 2. **Resize** - Landscape images wider than 1920px get scaled down. Portrait images taller than 1200px get scaled down. Smaller images pass through unchanged.
 3. **Watermark** - A tiled watermark pattern gets applied to every image. This protects your content from unauthorized copying.
-4. **Convert** - Two modern formats get generated: WebP and AVIF. These offer superior compression compared to JPEG or PNG.
-5. **Optimize** - Additional lossless optimizations run on all variants to strip unnecessary metadata and reduce file size.
+4. **Convert** - Images are converted to WebP (`WEBP_QUALITY=80`).
+5. **Optimize** - `image_optim` runs on generated WebP files.
+
+Current behavior details from implementation:
+- For non-SVG/non-animated images, the original downloaded file is deleted after successful WebP conversion.
+- SVG and animated GIF files are skipped from conversion and kept as original files.
 
 The script processes both content images (embedded in post body) and featured images (post thumbnails).
 
 ## Generated Formats
 
-For each source image, the pipeline produces three versions:
+For standard raster content images, the pipeline currently produces one optimized format:
 
 | Format | Quality | Use Case |
 |--------|---------|----------|
-| Original (PNG/JPG) | 100% | Fallback for older browsers |
-| WebP | 80% | Modern browsers, good compression |
-| AVIF | 50% | Best compression, newest browsers |
+| WebP | 80% | Primary delivery format |
 
-AVIF offers the best compression but lacks support in older browsers. WebP provides excellent compatibility with reasonable file sizes. The original format serves as a fallback for visitors using browsers that don't support either modern format.
-
-Hugo's image processing partials detect browser support automatically and serve the smallest supported format.
+Exceptions:
+- SVG files are preserved as SVG.
+- Animated GIF files are preserved as GIF.
 
 ## Customizing the Watermark
 
@@ -63,16 +65,13 @@ The script applies this watermark in a tiled pattern across each image at 20% op
 
 ### Watermark Configuration
 
-Edit constants at the top of `scripts/fetch-images.rb` to adjust:
+The current script behavior uses:
+- Tile grid: 4x4
+- Opacity: 20% dissolve
+- Rotation jitter: random between -30 and +30 degrees
+- Position jitter: random between -20 and +20 pixels
 
-```ruby
-WATERMARK_SIZE = 100       # Pixel size of watermark tile
-WATERMARK_OPACITY = 0.20   # Transparency (0.0 to 1.0)
-WATERMARK_TILES = 4         # Grid size (4x4 = 16 tiles per image)
-WATERMARK_JITTER = 20       # Random offset in pixels
-```
-
-Increasing `WATERMARK_JITTER` adds randomization to watermark placement, making removal attacks harder.
+To change these values, update `apply_tiled_watermark` in `scripts/fetch-images.rb`.
 
 ## Performance and Build Times
 
@@ -82,14 +81,13 @@ First run processes every image from scratch. Expect longer build times dependin
 - Total image file size
 - Server resources available
 
-Subsequent runs stay fast. The script checks modification times and skips images that already have WebP and AVIF variants newer than the original. This makes incremental updates nearly instant.
+Subsequent runs stay fast. The script checks modification times and skips images that already have WebP output newer than the original source file.
 
 To force reprocessing all images, delete the processed variants:
 
 ```bash
-rm hugo-site/static/images/content/*/*.webp
-rm hugo-site/static/images/content/*/*.avif
-rm hugo-site/static/images/featured/*.{webp,avif}
+rm -f hugo-site/static/images/content/*/*.webp
+rm -f hugo-site/static/images/featured/*.webp
 ```
 
 Then run the fetch script again.
@@ -109,11 +107,9 @@ docker compose up -d builder
 
 Two common causes exist. First, verify `watermark.png` exists in the static images directory. The script outputs "Applying tiled watermark" only when it finds this file. Second, check that the watermark file has actual content. A completely white PNG won't render visibly transparent or.
 
-### WebP/AVIF not served
+### WebP not served
 
-Hugo needs image processing partials that detect browser support. Ensure your theme or layouts include proper format detection. The Stack theme includes this functionality out of the box.
-
-If using a custom theme, add picture element markup that tests for AVIF, then WebP, then falls back to original format.
+Ensure generated markdown paths were updated to `/images/.../*.webp` and that files exist under `hugo-site/static/images/`.
 
 ### Out of memory during processing
 
