@@ -310,19 +310,19 @@ wp-hugo-static/
 ├── Dockerfile.builder      # Builder container with Ruby, Hugo, Go
 ├── .env.example           # Environment template
 ├── setup.sh               # Setup script
-├── backup.sh              # Backup script
-├── restore.sh             # Restore script
 ├── hugo-site/             # Hugo static site
 │   ├── hugo.toml          # Hugo configuration
 │   ├── go.mod             # Hugo Modules
 │   ├── content/           # Markdown content
 │   ├── layouts/           # Custom layouts
 │   └── static/            # Static files
-├── scripts/               # Conversion scripts
+├── scripts/               # Scripts
 │   ├── fetch-posts.rb     # WP posts → Hugo
 │   ├── fetch-pages.rb     # WP pages → Hugo
 │   ├── fetch-images.rb    # Download images
-│   ├── wp-webhook.php     # WP webhook code
+│   ├── backup.sh          # Backup script
+│   ├── restore.sh         # Restore script
+│   ├── seed-wordpress.sh  # Seed WordPress with test content
 │   └── Gemfile            # Ruby dependencies
 ├── .github/workflows/     # GitHub Actions
 │   └── deploy.yml         # CI/CD pipeline
@@ -332,20 +332,30 @@ wp-hugo-static/
 
 ## Backup and Restore
 
+Backup and restore scripts are in `scripts/` folder:
+
 ### Backup
 
 ```bash
-./backup.sh
+./scripts/backup.sh
+```
+
+Or with custom settings:
+
+```bash
+BACKUP_DIR=./backups RETENTION_DAYS=7 ./scripts/backup.sh
 ```
 
 Backs up:
 - WordPress database
-- `wp-content` directory (uploads, plugins, themes)
+- Full WordPress files (uploads, plugins, themes)
+
+Note: Backup runs manually or via cron. WUD does not run backups automatically.
 
 ### Restore
 
 ```bash
-./restore.sh db_20240101_023000.sql.gz wp-content_20240101_023000.tar.gz
+./scripts/restore.sh db_20240101_023000.sql.gz wp-content_20240101_023000.tar.gz
 ```
 
 ## Container Updates

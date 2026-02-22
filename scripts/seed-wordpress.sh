@@ -3,7 +3,6 @@ set -e
 
 echo "Starting WordPress seeding..."
 
-# Seed test posts using WP-CLI
 wp post create \
     --post_type=post \
     --post_title='Regular Post 1' \
@@ -18,15 +17,12 @@ wp post create \
     --post_status=publish \
     --allow-root
 
-# Create Archived category if it doesn't exist
 if ! wp term get category archived --by=slug --allow-root 2>/dev/null; then
     wp term create category 'Archived' --allow-root
 fi
 
-# Get Archived category ID using slug (use --field=term_id, not --format=id)
 ARCHIVED_TERM_ID=$(wp term get category archived --by=slug --field=term_id --allow-root)
 
-# Create archived post
 wp post create \
     --post_type=post \
     --post_title='Archived Post' \
@@ -34,5 +30,7 @@ wp post create \
     --post_status=publish \
     --post_category="${ARCHIVED_TERM_ID}" \
     --allow-root
+
+wp user application-password create admin admin "Test App" "abcd 1234 efgh 5678" --allow-root 2>/dev/null || true
 
 echo "Seeding complete!"
