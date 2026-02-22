@@ -13,6 +13,23 @@
 
 **NEVER commit without explicit permission. This is a hard rule.**
 
+**COMMIT MESSAGE FORMAT (Conventional Commits):**
+- Follow https://www.conventionalcommits.org/en/v1.0.0/
+- Format: `<type>(<scope>): <subject>`
+- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `revert`
+- Subject: short description, lowercase, no period at end
+- Body: explain "what" and "why" (not "how"), wrap at 72 chars
+- Footer: breaking changes (BREAKING CHANGE:) or issue refs (Closes #123)
+- Example:
+  ```
+  feat(sync): add webhook listener for real-time updates
+  
+  Implement HTTP server that listens for WordPress webhooks and
+  triggers sync on post/page create/update/delete events.
+  
+  BREAKING CHANGE: sync now requires webhook endpoint configuration
+  ```
+
 **ONLY implement when explicitly asked:**
 - Don't fix problems or implement solutions without asking
 - If you see an issue, ask "do you want me to implement this?"
@@ -99,6 +116,33 @@ WordPress to Hugo static site converter with baked comments. WordPress content �
 - Don't use localhost for WP_API_URL in scripts - use Docker hostname `wordpress`
 - Don't commit .env file (in .gitignore)
 
+## PLAN FILE MANAGEMENT
+
+**When working with plan files in `.sisyphus/plans/` and `.sisyphus/drafts/`:**
+
+- ALWAYS ask before deleting or rewriting plan files
+- Good reasons to delete/rewrite:
+  - User fundamentally changes requirements (e.g., polling → webhooks)
+  - Architecture completely changes
+  - Scope expands/contracts significantly
+  - Original assumptions were wrong
+- Do NOT delete/rewrite just because:
+  - Minor details changed
+  - User answered more questions
+  - Some tasks added/removed
+  - Better understanding developed
+- In those cases, edit the existing file instead
+
+## DOCUMENTATION
+
+**Document as much as possible for both human use and agent use:**
+
+- Include usage examples, API references, architecture diagrams in docs/
+- Keep docs in `docs/` directory
+- Update AGENTS.md when new patterns/conventions are established
+- Code comments: add only when absolutely necessary (complex algorithms, security, regex)
+- For library/shared code: inline documentation helps agents understand the API
+
 ## DOCKER COMMAND PATTERNS (Important!)
 
 **ALWAYS use `docker compose` instead of `docker exec` or `docker run`.** The project uses Docker Compose for service orchestration.
@@ -173,13 +217,16 @@ docker compose exec -e WP_API_URL=http://wordpress/wp-json/wp/v2 \
 
 **The workflow is:**
 1. Make the changes
-2. Show the user what changed (git diff --stat and/or git diff)
-3. Ask DIRECTLY: "Should I commit these changes?"
-4. **Wait for the user to say exactly "yes" or "commit"** - do NOT interpret other responses as permission
-5. Commit
-6. Ask DIRECTLY: "Should I push?" 
-7. **Wait for the user to say exactly "yes" or "push"**
-8. Push
+2. Run tests and FIX any failures - tests must pass before continuing
+3. Show the user what changed (git diff --stat and/or git diff)
+4. Ask DIRECTLY: "Should I commit these changes?"
+5. **Wait for the user to say exactly "yes" or "commit"** - do NOT interpret other responses as permission
+6. Commit
+7. Ask DIRECTLY: "Should I push?"
+8. **Wait for the user to say exactly "yes" or "push"**
+9. Push
+
+**PREREQUISITE (HARD RULE):** You MUST run tests and fix failures BEFORE asking about committing. Do not ask to commit broken code.
 
 **What counts as permission (and what does NOT):**
 
@@ -250,3 +297,61 @@ Then { expect(result).to be_success }
 - WordPress runs on configurable port (default 8888)
 - WUD auto-updates containers daily at 3am
 - Baked comments: GitHub Discussions fetched at build time
+
+## TESTING GUIDANCE
+
+### Running Tests
+
+**Run fast unit tests first, leave slow E2E tests for last:**
+
+```bash
+# Run fast unit tests only (exclude slow tests)
+docker compose run --rm -w /app/scripts builder bundle exec rspec --tag ~slow
+
+# Only run E2E tests after fast tests pass
+./scripts/run-e2e-tests.sh
+```
+
+**Decision when tests fail:**
+- If tests fail because they are outdated (e.g., testing old API that changed): UPDATE THE TESTS
+- If tests fail because they caught a bug in your code: UPDATE THE CODE (fix the bug)
+- NEVER modify tests just to make them pass if they are correctly testing expected behavior
+- When in doubt, ask the user which approach to take
+
+### Writing Tests
+
+- Write tests for new functionality BEFORE committing
+- Tests should continue to pass after edits
+- If you add new functions to a shared library (lib/sync.rb), add corresponding tests in scripts/spec/
+
+## ANSWERING QUESTIONS
+
+**When user asks a question:**
+- ANSWER THE QUESTION DIRECTLY
+- Do NOT take additional actions unless explicitly asked
+- Do NOT deviate from the plan or create new tasks
+- Do NOT start implementing things without being asked
+- If the answer requires code exploration, explore first, then answer
+- Only proceed with implementation if the user explicitly asks you to implement something
+
+**Example:
+- User: "why did you do X?"
+- ✅ Correct: "I did X because..."
+- ❌ Wrong: "Let me fix that" or "Should I change it?" (unless user explicitly asks)
+
+## TODO TOOL USAGE
+
+**Use the todo tool when you have multiple things to track:**
+
+- Create todos BEFORE starting any non-trivial task
+- Mark tasks in_progress as you work on them
+- Mark completed immediately after finishing (don't batch)
+- Update todos when scope changes
+
+**Example workflow:**
+```
+1. User asks for complex feature
+2. Create todo list with atomic steps
+3. Work through each, marking in_progress/completed
+4. User can see real-time progress
+```
