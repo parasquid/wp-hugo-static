@@ -108,6 +108,7 @@ WordPress to Hugo static site converter with baked comments. WordPress content â
 - Never suggest cleaning up `specs/` as optional
 - Always add `specs/` files to git when created
 - This includes draft documents - they are intentionally in drafts/ but still valuable
+- Treat `specs/` as a worklog and archive: do not retroactively update old spec files just to match current implementation state
 
 ## ANTI-PATTERNS
 
