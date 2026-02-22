@@ -23,6 +23,54 @@ services:
       - wp-network
     command: tail -f /dev/null
 
+  sync-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.builder
+    container_name: sync-server
+    working_dir: /app
+    volumes:
+      - .:/app
+      - builder-vendor:/app/vendor/bundle
+    environment:
+      - BUNDLE_PATH=/app/vendor/bundle
+      - GEM_HOME=/app/vendor/bundle
+      - WP_API_URL=http://wordpress/wp-json/wp/v2
+      - POSTS_OUTPUT_DIR=/app/hugo-site/content/posts
+      - PAGES_OUTPUT_DIR=/app/hugo-site/content/pages
+      - STATE_FILE=/app/hugo-site/.last-sync
+    env_file:
+      - .env
+    profiles:
+      - dev
+    networks:
+      - wp-network
+    ports:
+      - "4567:4567"
+    restart: unless-stopped
+    depends_on:
+      - builder
+    command: ruby scripts/sync-server.rb
+
+  hugo:
+    build:
+      context: .
+      dockerfile: Dockerfile.builder
+    container_name: hugo
+    working_dir: /app
+    volumes:
+      - .:/app
+    profiles:
+      - dev
+    networks:
+      - wp-network
+    ports:
+      - "1313:1313"
+    restart: unless-stopped
+    depends_on:
+      - sync-server
+    command: hugo server -w --bind 0.0.0.0 --port 1313
+
   wordpress:
     image: wordpress:6.4-apache
     container_name: wordpress
@@ -35,6 +83,7 @@ services:
       WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
       WORDPRESS_DB_NAME: wordpress
       WP_HOST: ${WP_HOST:-wordpress}
+      SYNC_WEBHOOK_URL: http://sync-server:4567/webhook
       WORDPRESS_CONFIG_EXTRA: |
         define('WP_HOME', 'http://${WP_HOST:-wordpress}:8888');
         define('WP_SITEURL', 'http://${WP_HOST:-wordpress}:8888');
@@ -42,6 +91,7 @@ services:
         define('WP_AUTO_UPDATE_CORE', false);
     volumes:
       - wp-html:/var/www/html
+      - ./scripts/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
     networks:
       - wp-network
     depends_on:
