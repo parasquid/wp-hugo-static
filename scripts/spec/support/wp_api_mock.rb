@@ -2,23 +2,22 @@
 
 require 'json'
 require 'webrick'
+require 'socket'
 
 class WpApiMock
   attr_reader :posts, :categories, :media, :pages
 
-  def initialize
+  def initialize(port: nil)
     @posts = []
     @categories = []
     @media = []
     @pages = []
     @server = nil
-    @port = 8889
-    @requests_count = {}
+    @port = port || available_port
   end
 
   def stub_posts(posts_array)
     @posts = posts_array
-    @requests_count[:posts] = 0
   end
 
   def stub_categories(categories_array)
@@ -53,7 +52,7 @@ class WpApiMock
     end
 
     Thread.new { @server.start }
-    sleep 0.5
+    wait_until_ready
     "http://localhost:#{@port}/wp-json/wp/v2"
   end
 
@@ -63,6 +62,28 @@ class WpApiMock
 
   private
 
+  def available_port
+    server = TCPServer.new('127.0.0.1', 0)
+    port = server.addr[1]
+    server.close
+    port
+  end
+
+  def wait_until_ready(timeout: 5)
+    deadline = Time.now + timeout
+    until Time.now > deadline
+      begin
+        socket = TCPSocket.new('127.0.0.1', @port)
+        socket.close
+        return
+      rescue StandardError
+        sleep 0.05
+      end
+    end
+
+    raise "WpApiMock failed to start on port #{@port}"
+  end
+
   def handle_posts(req, res)
     res['Content-Type'] = 'application/json'
     path = req.path
@@ -71,21 +92,17 @@ class WpApiMock
       post_id = path.split('/')[5].to_s.split('?').first.to_i
       post = @posts.find { |p| p['id'] == post_id }
       if post
-        result = { 'id' => post['id'], 'categories' => post['categories'] || [] }
-        res.body = result.to_json
+        res.body = post.to_json
       else
         res.status = 404
         res.body = { 'code' => 'rest_post_invalid_id', 'message' => 'Invalid post ID.' }.to_json
       end
     else
-      @requests_count[:posts] ||= 0
-      @requests_count[:posts] += 1
-
-      if @requests_count[:posts] > 1
-        res.body = [].to_json
-      else
-        res.body = @posts.to_json
-      end
+      page = (req.query['page'] || '1').to_i
+      per_page = (req.query['per_page'] || '100').to_i
+      start_index = (page - 1) * per_page
+      batch = @posts.slice(start_index, per_page) || []
+      res.body = batch.to_json
     end
   end
 
@@ -113,8 +130,12 @@ class WpApiMock
     res.body = @media.to_json
   end
 
-  def handle_pages(_req, res)
+  def handle_pages(req, res)
     res['Content-Type'] = 'application/json'
-    res.body = @pages.to_json
+    page = (req.query['page'] || '1').to_i
+    per_page = (req.query['per_page'] || '100').to_i
+    start_index = (page - 1) * per_page
+    batch = @pages.slice(start_index, per_page) || []
+    res.body = batch.to_json
   end
 end

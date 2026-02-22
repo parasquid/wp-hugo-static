@@ -1,18 +1,26 @@
 # frozen_string_literal: true
 
 require_relative 'spec_helper'
+require 'securerandom'
 
 RSpec.describe 'lib/sync.rb' do
   include HugoAssertions
 
-  let(:output_dir) { File.join(Dir.tmpdir, 'hugo-sync-test') }
+  let(:output_dir) { File.join(Dir.tmpdir, "hugo-sync-test-#{Process.pid}-#{SecureRandom.hex(4)}") }
   let(:mock_api) { WpApiMock.new }
+
+  around do |example|
+    keys = %w[POSTS_OUTPUT_DIR PAGES_OUTPUT_DIR STATE_FILE WP_API_URL SYNC_SERVER_PORT SYNC_WEBHOOK_SECRET]
+    saved_env = keys.to_h { |key| [key, ENV[key]] }
+    example.run
+  ensure
+    saved_env.each { |key, value| ENV[key] = value }
+  end
 
   before do
     ENV['POSTS_OUTPUT_DIR'] = output_dir
     ENV['PAGES_OUTPUT_DIR'] = output_dir
     ENV['STATE_FILE'] = File.join(output_dir, '.last-sync')
-    FileUtils.rm_rf(output_dir)
     FileUtils.mkdir_p(output_dir)
   end
 
@@ -117,10 +125,30 @@ RSpec.describe 'lib/sync.rb' do
     Then { expect(result.length).to eq(1) }
   end
 
-  # Skipping fetch_pages test - mock has state leakage issues between tests
-  # These are covered by integration tests
-  # describe 'fetch_pages' do
-  # end
+  describe 'fetch_pages' do
+    Given(:pages) do
+      [
+        { 'id' => 10, 'slug' => 'page-one', 'title' => { 'rendered' => 'Page One' },
+          'content' => { 'rendered' => '<p>One</p>' }, 'date' => '2024-01-15T10:00:00', 'status' => 'publish', 'parent' => 0 },
+        { 'id' => 11, 'slug' => 'page-two', 'title' => { 'rendered' => 'Page Two' },
+          'content' => { 'rendered' => '<p>Two</p>' }, 'date' => '2024-01-16T10:00:00', 'status' => 'publish', 'parent' => 0 }
+      ]
+    end
+    Given(:api_url) { mock_api.start }
+
+    before do
+      mock_api.stub_pages(pages)
+      ENV['WP_API_URL'] = api_url
+    end
+
+    When(:result) do
+      require_relative '../../lib/sync'
+      Sync.fetch_pages
+    end
+
+    Then { expect(result.length).to eq(2) }
+    And { expect(result.map { |page| page['slug'] }).to contain_exactly('page-one', 'page-two') }
+  end
 
   describe 'process_post' do
     Given(:post) { MockData.generate_mock_post('slug' => 'process-test-post') }
@@ -148,7 +176,8 @@ RSpec.describe 'lib/sync.rb' do
 
   describe 'process_page' do
     Given(:page) do
-      { 'id' => 1, 'slug' => 'test-page', 'title' => { 'rendered' => 'Test Page' }, 'content' => { 'rendered' => '<p>Page content</p>' }, 'date' => '2024-01-15T10:00:00', 'status' => 'publish', 'parent' => 0 }
+      { 'id' => 1, 'slug' => 'test-page', 'title' => { 'rendered' => 'Test Page' },
+        'content' => { 'rendered' => '<p>Page content</p>' }, 'date' => '2024-01-15T10:00:00', 'status' => 'publish', 'parent' => 0 }
     end
 
     When do
@@ -268,38 +297,36 @@ RSpec.describe 'lib/sync.rb' do
     Then { expect(is_archived).to be false }
   end
 
-  # sync_post uses mock_api which has state leakage - marking as pending
-  # TODO: Fix mock or use VCR
-  # describe 'sync_post' do
-  # end
+  describe 'sync_post' do
+    Given(:post) { MockData.generate_mock_post('id' => 42, 'slug' => 'sync-post-test', 'categories' => []) }
+    Given(:api_url) { mock_api.start }
 
-  # Config defaults - test that ENV fallback works correctly
+    before do
+      mock_api.stub_posts([post])
+      ENV['WP_API_URL'] = api_url
+    end
+
+    When(:result) do
+      require_relative '../../lib/sync'
+      Sync.sync_post(post['id'])
+    end
+
+    Then { expect(result).to eq(1) }
+    And { assert_file_exists(File.join(output_dir, 'sync-post-test.md')) }
+  end
+
   describe 'Config defaults' do
     it 'uses default WP_API_URL when ENV is not set' do
-      # Save and remove all ENV vars before loading module
-      saved_env = {
-        'WP_API_URL' => ENV['WP_API_URL'],
-        'POSTS_OUTPUT_DIR' => ENV['POSTS_OUTPUT_DIR'],
-        'PAGES_OUTPUT_DIR' => ENV['PAGES_OUTPUT_DIR'],
-        'STATE_FILE' => ENV['STATE_FILE']
-      }
-      
       ENV.delete('WP_API_URL')
       ENV.delete('POSTS_OUTPUT_DIR')
       ENV.delete('PAGES_OUTPUT_DIR')
       ENV.delete('STATE_FILE')
-      
-      # Force reload of Sync module to pick up new ENV
-      Object.send(:remove_const, :Sync) if defined?(Sync)
-      load File.expand_path('../../lib/sync.rb', __dir__)
-      
+      require_relative '../../lib/sync'
+
       expect(Sync::Config.wp_api_url).to eq('https://your-domain.com/wp-json/wp/v2')
       expect(Sync::Config.posts_output_dir).to eq('hugo-site/content/posts')
       expect(Sync::Config.pages_output_dir).to eq('hugo-site/content/pages')
       expect(Sync::Config.state_file).to eq('hugo-site/.last-sync')
-    ensure
-      # Restore original ENV values
-      saved_env.each { |key, value| ENV[key] = value }
     end
   end
 end

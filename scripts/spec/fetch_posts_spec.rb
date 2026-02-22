@@ -1,18 +1,26 @@
 # frozen_string_literal: true
 
 require_relative 'spec_helper'
+require 'securerandom'
 
 RSpec.describe 'fetch-posts.rb' do
   include HugoAssertions
 
-  let(:output_dir) { File.join(Dir.tmpdir, 'hugo-posts-test') }
+  let(:output_dir) { File.join(Dir.tmpdir, "hugo-posts-test-#{Process.pid}-#{SecureRandom.hex(4)}") }
   let(:mock_api) { WpApiMock.new }
+
+  around do |example|
+    keys = %w[POSTS_OUTPUT_DIR PAGES_OUTPUT_DIR STATE_FILE WP_API_URL]
+    saved_env = keys.to_h { |key| [key, ENV[key]] }
+    example.run
+  ensure
+    saved_env.each { |key, value| ENV[key] = value }
+  end
 
   before do
     ENV['POSTS_OUTPUT_DIR'] = output_dir
     ENV['PAGES_OUTPUT_DIR'] = output_dir
     ENV['STATE_FILE'] = File.join(output_dir, '.last-sync')
-    FileUtils.rm_rf(output_dir)
     FileUtils.mkdir_p(output_dir)
   end
 

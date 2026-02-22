@@ -20,14 +20,68 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "Waiting for WordPress to be ready..."
-sleep 90
+wait_for_wordpress() {
+    local timeout=300
+    local interval=5
+    local elapsed=0
+
+    echo "Waiting for WordPress to be ready..."
+    while true; do
+        if docker compose -p test-e2e -f docker-compose.test.yml exec -T builder \
+            bash -lc 'curl -s -o /dev/null -w "%{http_code}" http://test-wordpress/wp-json/ 2>/dev/null | grep -E "^(200|302)$" >/dev/null'; then
+            echo "WordPress is ready"
+            break
+        fi
+
+        if [ "$elapsed" -ge "$timeout" ]; then
+            echo "FAIL: WordPress did not become ready in ${timeout}s"
+            exit 1
+        fi
+
+        sleep "$interval"
+        elapsed=$((elapsed + interval))
+    done
+}
+
+wait_for_wordpress
+
+wait_for_seeded_posts() {
+    local timeout=180
+    local interval=5
+    local elapsed=0
+
+    echo "Waiting for seeded posts to be available..."
+    while true; do
+        if docker compose -p test-e2e -f docker-compose.test.yml exec -T builder \
+            bash -lc 'curl -s -o /dev/null -w "%{http_code}" "http://test-wordpress/wp-json/wp/v2/posts?per_page=1&status=publish" 2>/dev/null | grep -E "^200$" >/dev/null'; then
+            echo "Seeded posts endpoint is ready"
+            break
+        fi
+
+        if [ "$elapsed" -ge "$timeout" ]; then
+            echo "FAIL: Seeded posts endpoint did not become ready in ${timeout}s"
+            exit 1
+        fi
+
+        sleep "$interval"
+        elapsed=$((elapsed + interval))
+    done
+}
+
+wait_for_seeded_posts
 
 echo "Running E2E tests..."
 
 # Run fetch-posts in builder container
 echo "=== Fetching posts ==="
-docker compose -p test-e2e exec -w /app/scripts -e WP_API_URL=http://test-wordpress/wp-json/wp/v2 -e WP_USERNAME= -e WP_APPLICATION_PASSWORD= builder ruby fetch-posts.rb
+docker compose -p test-e2e exec -w /app/scripts \
+  -e WP_API_URL=http://test-wordpress/wp-json/wp/v2 \
+  -e WP_USERNAME= \
+  -e WP_APPLICATION_PASSWORD= \
+  -e POSTS_OUTPUT_DIR=/app/hugo-site/content/posts \
+  -e PAGES_OUTPUT_DIR=/app/hugo-site/content/pages \
+  -e STATE_FILE=/app/hugo-site/.last-sync \
+  builder ruby fetch-posts.rb
 
 # Verify posts were fetched
 POST_COUNT=$(ls -1 hugo-site/content/posts/*.md 2>/dev/null | wc -l)
