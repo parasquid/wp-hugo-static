@@ -4,7 +4,52 @@ This guide covers how to test the wp-hugo-static workflow, including the baked c
 
 See [local-dev-setup.md](local-dev-setup.md) for full setup instructions.
 
-## Testing the Baked Comments Feature
+## E2E Tests (Automated Pipeline)
+
+The project includes an automated E2E test that runs the full pipeline: WordPress → fetch-posts → Hugo build.
+
+### Run E2E Tests
+
+```bash
+./scripts/run-e2e-tests.sh
+```
+
+### What It Does
+
+1. **Cleans up** previous test containers and data
+2. **Starts** test containers: WordPress, MariaDB, builder, seeder
+3. **Waits** for WordPress to be ready
+4. **Fetches** posts from WordPress REST API
+5. **Verifies** posts were created
+6. **Builds** Hugo site
+7. **Verifies** Hugo build output exists
+8. **Cleans up** containers and volumes
+
+### Test Container Details
+
+- Uses `docker-compose.test.yml` (isolated from main `docker-compose.yml`)
+- Project namespace: `test-e2e`
+- WordPress URL: `http://test-wordpress` (internal Docker hostname)
+- REST API: **unauthenticated** (disabled via mu-plugin for test convenience)
+- Volumes are ephemeral (destroyed after test)
+
+### Gotchas
+
+- **Takes ~2 minutes** (waits 90s for WordPress to start)
+- **Requires Docker** to be running
+- Cleans up ALL test containers before starting (safe to run multiple times)
+- Test WordPress uses `test-wordpress` hostname (not `wordpress`)
+- REST API auth disabled via `scripts/mu-plugins/disable-rest-auth.php`
+
+### Files Involved
+
+| File | Purpose |
+|------|---------|
+| `scripts/run-e2e-tests.sh` | Main test runner script |
+| `docker-compose.test.yml` | Test container definitions |
+| `scripts/mu-plugins/disable-rest-auth.php` | Disables REST API auth for test |
+
+## Manual Testing the Baked Comments Feature
 
 ### Overview
 

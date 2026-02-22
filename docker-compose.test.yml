@@ -1,0 +1,141 @@
+# docker-compose.test.yml - Isolated test environment
+# Used by E2E tests - no port exposure, isolated volumes
+
+services:
+  builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.builder
+    working_dir: /app
+    volumes:
+      - .:/app
+      - builder-vendor:/app/vendor/bundle
+    environment:
+      - BUNDLE_PATH=/app/vendor/bundle
+      - GEM_HOME=/app/vendor/bundle
+      - OUTPUT_DIR=/app/hugo-site/content/posts
+      - FONTCONFIG_FILE=/etc/fonts/fonts.conf
+    env_file:
+      - .env
+    networks:
+      - test-network
+    command: tail -f /dev/null
+
+  test-wordpress:
+    image: wordpress:6.4-apache
+    restart: "no"
+    container_name: test-wordpress
+    environment:
+      WORDPRESS_DB_HOST: test-db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_HOME', 'http://test-wordpress');
+        define('WP_SITEURL', 'http://test-wordpress');
+        define('AUTOMATIC_UPDATER_DISABLED', true);
+        define('WP_AUTO_UPDATE_CORE', false);
+    volumes:
+      - test-wp-html:/var/www/html
+    networks:
+      - test-network
+    depends_on:
+      test-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      - wud.tag.include=^6\.4-apache$
+      - wud.trigger=docker-compose
+
+  seeder:
+    image: wordpress:cli
+    restart: "no"
+    networks:
+      - test-network
+    depends_on:
+      test-wordpress:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: test-db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - test-wp-html:/var/www/html
+      - ./scripts/seed-wordpress.sh:/seed.sh:ro
+      - ./scripts/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        curl -sO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+        chmod +x wp-cli.phar
+        mv wp-cli.phar /usr/local/bin/wp
+        
+        cd /var/www/html
+        
+        echo "Checking for WordPress installation..."
+        if wp core is-installed --allow-root 2>/dev/null; then
+          echo "WordPress already installed!"
+        else
+          echo "Installing WordPress via WP-CLI..."
+          wp core install \
+            --url="http://test-wordpress" \
+            --title="wp-hugo-static-test" \
+            --admin_user=admin \
+            --admin_password=admin \
+            --admin_email="admin@example.com" \
+            --skip-email \
+            --allow-root
+          echo "WordPress installed!"
+        fi
+        
+        if wp option get seeded --allow-root 2>/dev/null; then
+          echo "Already seeded, skipping."
+        else
+          echo "Seeding..."
+          cp /seed.sh /tmp/seed.sh
+          chmod +x /tmp/seed.sh
+          /tmp/seed.sh
+          echo "Creating application password..."
+          APP_PASS=$(wp user application-password create admin testapp --porcelain --allow-root 2>/dev/null) || echo "App password may already exist"
+          if [ -n "$APP_PASS" ]; then
+            echo "$APP_PASS" > /var/www/html/app-password.txt
+            echo "App password saved: $APP_PASS"
+          fi
+          wp option add seeded 1 --allow-root
+          echo "Done!"
+        fi
+
+  test-db:
+    image: mariadb:10.11
+    restart: "no"
+    container_name: test-db
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - test-db-data:/var/lib/mysql
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  test-db-data:
+  test-wp-html:
+  builder-vendor:
+
+networks:
+  test-network:
+    driver: bridge

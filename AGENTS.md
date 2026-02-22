@@ -13,6 +13,19 @@
 
 **NEVER commit without explicit permission. This is a hard rule.**
 
+**ONLY implement when explicitly asked:**
+- Don't fix problems or implement solutions without asking
+- If you see an issue, ask "do you want me to implement this?"
+- Wait for explicit "yes" before making changes
+- When asked to implement, ask clarifying questions first if needed
+
+**FILE EDITING RULES (STRICT):**
+- When editing files: use EDIT tool, not WRITE tool
+- NEVER use Write tool on existing files - only use Write for BRAND NEW files that don't exist
+- NEVER delete files - use edit to make changes instead
+- If you need to rewrite a file, ask for permission first
+- This applies to ALL files including test files, config files, scripts, etc.
+
 ## OVERVIEW
 
 WordPress to Hugo static site converter with baked comments. WordPress content → Ruby scripts → Hugo → Cloudflare Pages.
@@ -45,6 +58,26 @@ WordPress to Hugo static site converter with baked comments. WordPress content �
 ## CONVENTIONS
 
 - Docker Compose: services on `wp-network` bridge
+
+## DOCUMENTATION INDEX
+
+**Always check docs/ before asking the user:**
+
+| Doc | Purpose |
+|-----|---------|
+| docs/local-dev-setup.md | How to set up local dev environment |
+| docs/testing.md | How to test (manual & automated) |
+| docs/testing-rspec.md | RSpec test suite architecture |
+| docs/workflow-reference.md | Common workflows explained |
+| docs/hybrid-content.md | Mixing static & dynamic content |
+| docs/wp-cli-reference.md | Useful WP-CLI commands |
+| docs/image-optimization.md | Image optimization settings |
+
+**Key scripts:**
+- `scripts/run-e2e-tests.sh` - Automated E2E test (`./scripts/run-e2e-tests.sh`)
+
+## TECHNICAL DETAILS
+
 - Ruby scripts: require WordPress REST API + GitHub GraphQL
 - Hugo: Stack theme via Hugo Modules (no git submodules)
 - Posts: Markdown in hugo-site/content/posts/
