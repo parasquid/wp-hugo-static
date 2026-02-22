@@ -1,5 +1,0 @@
-# Caddyfile - Local development (no HTTPS)
-
-:80 {
-    respond "Hello from Caddy!" 200
-}
